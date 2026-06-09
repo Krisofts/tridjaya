@@ -25,7 +25,7 @@ class Lead extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | MUTATORS (AUTO CLEAN INPUT)
+    | MUTATORS
     |--------------------------------------------------------------------------
     */
 
@@ -49,19 +49,58 @@ class Lead extends Model
                     return null;
                 }
 
-                // ambil angka saja
                 $phone = preg_replace('/\D/', '', $value);
 
-                // normalisasi Indonesia (0 → 62)
                 if (str_starts_with($phone, '0')) {
                     $phone = '62' . substr($phone, 1);
                 }
 
-                // kalau sudah 62 tapi belum +, tetap simpan tanpa +
-                // biar konsisten database
                 return $phone;
             }
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONS
+    |--------------------------------------------------------------------------
+    */
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(LeadActivity::class)
+            ->latest();
+    }
+
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(LeadReminder::class)
+            ->latest();
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(LeadTransaction::class)
+            ->latest();
+    }
+
+    /**
+     * CRM Tasks
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(LeadTask::class)
+            ->latest();
+    }
+
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /*
@@ -72,58 +111,19 @@ class Lead extends Model
 
     public function getWhatsappNumberAttribute(): ?string
     {
-        if (!$this->phone) {
-            return null;
-        }
-
-        return $this->phone; // sudah format 62xxxxxxxx
+        return $this->phone;
     }
 
     public function getWhatsappUrlAttribute(): ?string
     {
-        if (!$this->phone) {
-            return null;
-        }
-
-        return 'https://wa.me/' . $this->phone;
+        return $this->phone
+            ? "https://wa.me/{$this->phone}"
+            : null;
     }
 
     /*
     |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
-
-    public function reminders(): HasMany
-    {
-        return $this->hasMany(LeadReminder::class);
-    }
-
-    public function activities(): HasMany
-    {
-        return $this->hasMany(LeadActivity::class)
-            ->latest();
-    }
-
-    public function assignedTo(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_to');
-    }
-    
-    public function transactions(): HasMany
-{
-    return $this->hasMany(\App\CRM\Models\LeadTransaction::class)
-        ->latest();
-}
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /* 
-    |--------------------------------------------------------------------------
-    | OPTIONS (CONFIG DRIVEN)
+    | OPTIONS
     |--------------------------------------------------------------------------
     */
 

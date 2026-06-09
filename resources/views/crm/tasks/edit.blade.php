@@ -3,168 +3,168 @@
 @section('title', 'Edit Task')
 
 @section('content')
+<div class="p-6 max-w-3xl mx-auto space-y-6">
 
-<x-common.page-breadcrumb pageTitle="Edit Task" />
-
-<div class="max-w-2xl mx-auto">
-
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-
-        {{-- HEADER --}}
-        <div class="border-b border-gray-200 px-6 py-5 dark:border-gray-800">
-
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-                Edit Task
-            </h2>
-
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Update task information below.
-            </p>
-
-        </div>
-
-        {{-- FORM --}}
-        <form method="POST"
-              action="{{ route('crm.tasks.update', $task) }}">
-
-            @csrf
-            @method('PUT')
-
-            <div class="p-6 space-y-5">
-
-                {{-- TITLE --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Task Title
-                    </label>
-
-                    <input type="text"
-                           name="title"
-                           value="{{ $task->title }}"
-                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm
-                           text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-                           focus:border-brand-300 focus:ring-brand-500/10">
-                </div>
-
-                {{-- DESCRIPTION --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Description
-                    </label>
-
-                    <textarea name="description"
-                              rows="4"
-                              class="w-full rounded-lg border border-gray-300 bg-transparent px-4 py-3 text-sm
-                              text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-                              focus:border-brand-300 focus:ring-brand-500/10">{{ $task->description }}</textarea>
-                </div>
-
-                {{-- LEAD --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Lead
-                    </label>
-
-                    <select name="lead_id"
-                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm
-                            dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-
-                        <option value="">Select Lead</option>
-
-                        @foreach(\App\CRM\Models\Lead::all() as $lead)
-                            <option value="{{ $lead->id }}"
-                                @selected($task->lead_id == $lead->id)>
-                                {{ $lead->name }}
-                            </option>
-                        @endforeach
-
-                    </select>
-                </div>
-
-                {{-- ASSIGNED --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Assign To
-                    </label>
-
-                    <select name="assigned_to"
-                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm
-                            dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-
-                        <option value="">Select User</option>
-
-                        @foreach(\App\User\Models\User::select('id','name')->get() as $user)
-                            <option value="{{ $user->id }}"
-                                @selected($task->assigned_to == $user->id)>
-                                {{ $user->name }}
-                            </option>
-                        @endforeach
-
-                    </select>
-                </div>
-
-                {{-- PRIORITY --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Priority
-                    </label>
-
-                    <select name="priority"
-                            class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm
-                            dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-
-                        @foreach(['low','medium','high'] as $priority)
-                            <option value="{{ $priority }}"
-                                @selected($task->priority == $priority)>
-                                {{ ucfirst($priority) }}
-                            </option>
-                        @endforeach
-
-                    </select>
-                </div>
-
-                {{-- DUE DATE --}}
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Due Date
-                    </label>
-
-                    <input type="datetime-local"
-                           name="due_date"
-                           value="{{ $task->due_date?->format('Y-m-d\TH:i') }}"
-                           class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm
-                           text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-                           focus:border-brand-300 focus:ring-brand-500/10">
-                </div>
-
-            </div>
-
-            {{-- FOOTER --}}
-            <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-800">
-
-                <a href="{{ route('crm.tasks.index') }}"
-                   class="inline-flex items-center justify-center rounded-lg border border-gray-300
-                          bg-white px-4 py-2.5 text-sm font-medium text-gray-700
-                          hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800
-                          dark:text-gray-300 dark:hover:bg-gray-700">
-
-                    Cancel
-                </a>
-
-                <button type="submit"
-                        class="inline-flex items-center justify-center rounded-lg
-                               bg-brand-500 px-4 py-2.5 text-sm font-medium text-white
-                               shadow-theme-xs hover:bg-brand-600 transition">
-
-                    Update Task
-                </button>
-
-            </div>
-
-        </form>
-
+    {{-- HEADER --}}
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Edit Task</h1>
+        <p class="text-sm text-gray-500">
+            Update task: <span class="font-medium">{{ $task->title }}</span>
+        </p>
     </div>
 
-</div>
+    {{-- FORM --}}
+    <form action="{{ route('crm.tasks.update', $task) }}"
+          method="POST"
+          class="bg-white shadow rounded-lg p-6 space-y-5">
 
+        @csrf
+        @method('PUT')
+
+        {{-- TITLE --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Title</label>
+            <input type="text"
+                   name="title"
+                   value="{{ old('title', $task->title) }}"
+                   class="w-full border rounded px-3 py-2 mt-1">
+
+            @error('title')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- DESCRIPTION --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Description</label>
+            <textarea name="description"
+                      class="w-full border rounded px-3 py-2 mt-1"
+                      rows="3">{{ old('description', $task->description) }}</textarea>
+
+            @error('description')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- TYPE --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Type</label>
+            <select name="type" class="w-full border rounded px-3 py-2 mt-1">
+
+                <option value="">Select Type</option>
+
+                @foreach(\App\CRM\Models\LeadTask::types() as $type)
+                    <option value="{{ $type }}"
+                        @selected(old('type', $task->type) == $type)>
+                        {{ ucfirst($type) }}
+                    </option>
+                @endforeach
+
+            </select>
+
+            @error('type')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- PRIORITY --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Priority</label>
+            <select name="priority" class="w-full border rounded px-3 py-2 mt-1">
+
+                <option value="">Medium (Default)</option>
+
+                @foreach(\App\CRM\Models\LeadTask::priorities() as $priority)
+                    <option value="{{ $priority }}"
+                        @selected(old('priority', $task->priority) == $priority)>
+                        {{ ucfirst($priority) }}
+                    </option>
+                @endforeach
+
+            </select>
+
+            @error('priority')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- ASSIGNED TO --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Assigned To (User ID)</label>
+            <input type="number"
+                   name="assigned_to"
+                   value="{{ old('assigned_to', $task->assigned_to) }}"
+                   class="w-full border rounded px-3 py-2 mt-1">
+
+            @error('assigned_to')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- DUE DATE --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Due Date</label>
+            <input type="date"
+                   name="due_date"
+                   value="{{ old('due_date', optional($task->due_date)->format('Y-m-d')) }}"
+                   class="w-full border rounded px-3 py-2 mt-1">
+
+            @error('due_date')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- REMINDER --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Reminder At</label>
+            <input type="datetime-local"
+                   name="reminder_at"
+                   value="{{ old('reminder_at', optional($task->reminder_at)->format('Y-m-d\TH:i')) }}"
+                   class="w-full border rounded px-3 py-2 mt-1">
+
+            @error('reminder_at')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- NOTES --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Notes</label>
+            <textarea name="notes"
+                      class="w-full border rounded px-3 py-2 mt-1"
+                      rows="3">{{ old('notes', $task->notes) }}</textarea>
+
+            @error('notes')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- METADATA --}}
+        <div>
+            <label class="text-sm font-medium text-gray-700">Metadata (JSON)</label>
+            <textarea name="metadata"
+                      class="w-full border rounded px-3 py-2 mt-1 font-mono"
+                      rows="3">{{ old('metadata', json_encode($task->metadata, JSON_PRETTY_PRINT)) }}</textarea>
+
+            @error('metadata')
+                <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- ACTION --}}
+        <div class="flex justify-end gap-2">
+            <a href="{{ route('crm.tasks.index') }}"
+               class="px-4 py-2 border rounded hover:bg-gray-100">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700">
+                Update Task
+            </button>
+        </div>
+
+    </form>
+
+</div>
 @endsection

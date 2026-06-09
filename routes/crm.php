@@ -1,13 +1,14 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\CRM\LeadController;
 use App\Http\Controllers\CRM\LeadReminderController;
-use App\Http\Controllers\CRM\TaskController;
 use App\Http\Controllers\CRM\LeadTransactionController;
 use App\Http\Controllers\CRM\CustomerController;
+use App\Http\Controllers\CRM\LeadTaskController;
 use App\Http\Controllers\CRM\ReportController;
 
 Route::middleware(['auth', 'group:admin,superadmin'])
@@ -27,16 +28,58 @@ Route::middleware(['auth', 'group:admin,superadmin'])
         Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])
             ->name('leads.status');
 
-         /*
+                /*
         |------------------------------------------
         | TASKS
         |------------------------------------------
         */
-        Route::resource('tasks', TaskController::class)
-            ->except(['show']);
+        Route::prefix('tasks')
+            ->name('tasks.')
+            ->group(function () {
 
-        Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])
-            ->name('tasks.status');
+                // LIST
+                Route::get('/', [LeadTaskController::class, 'index'])
+                    ->name('index');
+
+                // CREATE
+                Route::get('/create', [LeadTaskController::class, 'create'])
+                    ->name('create');
+
+                Route::post('/', [LeadTaskController::class, 'store'])
+                    ->name('store');
+
+                // SHOW
+                Route::get('/{task}', [LeadTaskController::class, 'show'])
+                    ->name('show');
+
+                // EDIT
+                Route::get('/{task}/edit', [LeadTaskController::class, 'edit'])
+                    ->name('edit');
+
+                Route::put('/{task}', [LeadTaskController::class, 'update'])
+                    ->name('update');
+
+                // ACTIONS
+                Route::post('/{task}/start', [LeadTaskController::class, 'start'])
+                    ->name('start');
+
+                Route::post('/{task}/complete', [LeadTaskController::class, 'complete'])
+                    ->name('complete');
+
+                Route::post('/{task}/cancel', [LeadTaskController::class, 'cancel'])
+                    ->name('cancel');
+
+                Route::post('/{task}/assign', [LeadTaskController::class, 'assign'])
+                    ->name('assign');
+
+                Route::post('/{task}/reopen', [LeadTaskController::class, 'reopen'])
+                    ->name('reopen');
+
+                // DELETE
+                Route::delete('/{task}', [LeadTaskController::class, 'destroy'])
+                    ->name('destroy');
+            });
+        
 
         /*
         |------------------------------------------

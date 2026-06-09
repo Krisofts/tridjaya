@@ -21,7 +21,7 @@ use App\CRM\Models\LeadTransaction;
 */
 use App\CRM\Observers\LeadObserver;
 use App\CRM\Observers\LeadReminderObserver;
-use App\CRM\Observers\TaskObserver;
+
 use App\CRM\Observers\LeadTransactionObserver;
 
 class AppServiceProvider extends ServiceProvider
@@ -46,16 +46,7 @@ class AppServiceProvider extends ServiceProvider
         */
 
         Lead::observe(LeadObserver::class);
-
         LeadReminder::observe(LeadReminderObserver::class);
-
-        Task::observe(TaskObserver::class);
-
-        /*
-        |--------------------------------------------------------------------------
-        | TRANSACTION OBSERVER (NEW)
-        |--------------------------------------------------------------------------
-        */
         LeadTransaction::observe(LeadTransactionObserver::class);
     }
 }

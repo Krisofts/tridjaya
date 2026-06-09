@@ -3,300 +3,190 @@
 @section('title', 'Tasks')
 
 @section('content')
-
-<x-common.page-breadcrumb pageTitle="Tasks" />
-
-<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+<div class="p-6 space-y-6">
 
     {{-- HEADER --}}
-    <div class="border-b border-gray-200 px-6 py-5 dark:border-gray-800">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
-            <div>
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">
-                    Task Management
-                </h2>
-
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Manage all CRM tasks efficiently.
-                </p>
-            </div>
-
-            <a href="{{ route('crm.tasks.create') }}"
-               class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
-
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M5 10H15M10 5V15"
-                          stroke="currentColor" stroke-width="1.5"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-
-                New Task
-            </a>
-
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">CRM Tasks</h1>
+            <p class="text-sm text-gray-500">Manage all lead tasks</p>
         </div>
+
+        <a href="{{ route('crm.tasks.create') }}"
+           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            + New Task
+        </a>
     </div>
 
-    {{-- SEARCH & FILTER --}}
-    <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+    {{-- FILTER FORM --}}
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-lg shadow">
 
-        <form method="GET">
-            <div class="flex gap-3 sm:justify-between">
+        <input type="text"
+               name="search"
+               value="{{ request('search') }}"
+               placeholder="Search title..."
+               class="border rounded px-3 py-2 w-full">
 
-                {{-- SEARCH --}}
-                <div class="relative flex-1 sm:flex-auto">
+        <select name="status" class="border rounded px-3 py-2">
+            <option value="">All Status</option>
+            @foreach([\App\CRM\Models\LeadTask::STATUS_OPEN,
+                      \App\CRM\Models\LeadTask::STATUS_IN_PROGRESS,
+                      \App\CRM\Models\LeadTask::STATUS_DONE,
+                      \App\CRM\Models\LeadTask::STATUS_CANCELLED] as $status)
+                <option value="{{ $status }}" @selected(request('status') == $status)>
+                    {{ ucfirst(str_replace('_',' ', $status)) }}
+                </option>
+            @endforeach
+        </select>
 
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ request('search') }}"
-                        placeholder="Search task title..."
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10
-                        h-11 w-full sm:w-[320px] rounded-lg border border-gray-300 bg-transparent
-                        px-4 text-sm text-gray-800 placeholder:text-gray-400
-                        dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
-                    >
-                </div>
+        <select name="priority" class="border rounded px-3 py-2">
+            <option value="">All Priority</option>
+            @foreach(\App\CRM\Models\LeadTask::priorities() as $priority)
+                <option value="{{ $priority }}" @selected(request('priority') == $priority)>
+                    {{ ucfirst($priority) }}
+                </option>
+            @endforeach
+        </select>
 
-                {{-- FILTER DROPDOWN --}}
-                <div class="relative" x-data="{ showFilter: false }">
+        <input type="date"
+               name="due_date"
+               value="{{ request('due_date') }}"
+               class="border rounded px-3 py-2">
 
-                    <button type="button"
-                            @click="showFilter = !showFilter"
-                            class="shadow-theme-xs flex h-11 items-center gap-2 rounded-lg border border-gray-300
-                            bg-white px-4 py-2.5 text-sm font-medium text-gray-700
-                            dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none">
-                            <path d="M14 6H2M18 14H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-
-                        Filter
-                    </button>
-
-                    <div x-show="showFilter"
-                         @click.away="showFilter = false"
-                         x-transition
-                         class="absolute right-0 z-10 mt-2 w-56 rounded-lg border border-gray-200
-                         bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-
-                        {{-- STATUS --}}
-                        <div class="mb-4">
-                            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                Status
-                            </label>
-
-                            <select name="status"
-                                    class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm
-                                    dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-
-                                <option value="">All</option>
-                                <option value="open" @selected(request('status')=='open')>Open</option>
-                                <option value="in_progress" @selected(request('status')=='in_progress')>In Progress</option>
-                                <option value="done" @selected(request('status')=='done')>Done</option>
-                                <option value="cancelled" @selected(request('status')=='cancelled')>Cancelled</option>
-                            </select>
-                        </div>
-
-                        {{-- PRIORITY --}}
-                        <div class="mb-4">
-                            <label class="mb-2 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                Priority
-                            </label>
-
-                            <select name="priority"
-                                    class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm
-                                    dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-
-                                <option value="">All</option>
-                                <option value="low" @selected(request('priority')=='low')>Low</option>
-                                <option value="medium" @selected(request('priority')=='medium')>Medium</option>
-                                <option value="high" @selected(request('priority')=='high')>High</option>
-                            </select>
-                        </div>
-
-                        {{-- SUBMIT --}}
-                        <button class="bg-brand-500 hover:bg-brand-600 h-10 w-full rounded-lg text-sm font-medium text-white">
-                            Apply
-                        </button>
-
-                        <a href="{{ route('crm.tasks.index') }}"
-                           class="mt-2 flex h-10 w-full items-center justify-center rounded-lg border
-                           border-gray-300 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
-                            Reset
-                        </a>
-
-                    </div>
-                </div>
-
-            </div>
-        </form>
-    </div>
+        <button class="bg-gray-800 text-white rounded px-4 py-2 hover:bg-gray-900">
+            Filter
+        </button>
+    </form>
 
     {{-- TABLE --}}
-    <div class="max-w-full overflow-x-auto custom-scrollbar">
+    <div class="bg-white shadow rounded-lg overflow-hidden">
 
-        <table class="min-w-full">
-
-            <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-800">
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Task
-                    </th>
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Lead
-                    </th>
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Priority
-                    </th>
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Status
-                    </th>
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Assigned
-                    </th>
-
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Due
-                    </th>
-
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Action
-                    </th>
-
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100 text-left">
+                <tr>
+                    <th class="p-3">Title</th>
+                    <th class="p-3">Type</th>
+                    <th class="p-3">Priority</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Assigned</th>
+                    <th class="p-3">Due Date</th>
+                    <th class="p-3 text-right">Action</th>
                 </tr>
             </thead>
 
-            <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <tbody>
+                @forelse ($tasks as $task)
+                    <tr class="border-t hover:bg-gray-50">
 
-                @forelse($tasks as $task)
-                    <tr>
-
-                        {{-- TASK --}}
-                        <td class="px-6 py-3.5">
-                            <div class="flex flex-col">
-                                <p class="font-medium text-gray-800 dark:text-white/90">
-                                    {{ $task->title }}
-                                </p>
-
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ Str::limit($task->description, 40) }}
-                                </p>
+                        {{-- TITLE --}}
+                        <td class="p-3">
+                            <div class="font-medium text-gray-900">
+                                {{ $task->title }}
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ $task->lead?->name ?? 'No Lead' }}
                             </div>
                         </td>
 
-                        {{-- LEAD --}}
-                        <td class="px-6 py-3.5 text-gray-500 dark:text-gray-400">
-                            {{ $task->lead?->name ?? '-' }}
+                        {{-- TYPE --}}
+                        <td class="p-3">
+                            <span class="text-xs px-2 py-1 rounded bg-gray-100">
+                                {{ $task->type_label }}
+                            </span>
                         </td>
 
                         {{-- PRIORITY --}}
-                        <td class="px-6 py-3.5">
-                            @php
-                                $priorityColors = [
-                                    'low' => 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-400',
-                                    'medium' => 'bg-yellow-50 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
-                                    'high' => 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-400',
-                                ];
-                            @endphp
-
-                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium
-                                {{ $priorityColors[$task->priority] ?? 'bg-gray-100 text-gray-700' }}">
-                                {{ ucfirst($task->priority) }}
+                        <td class="p-3">
+                            <span class="text-xs px-2 py-1 rounded
+                                @if($task->priority === 'high') bg-red-100 text-red-700
+                                @elseif($task->priority === 'medium') bg-yellow-100 text-yellow-700
+                                @else bg-green-100 text-green-700
+                                @endif">
+                                {{ $task->priority_label }}
                             </span>
                         </td>
 
                         {{-- STATUS --}}
-                        <td class="px-6 py-3.5">
-                            @php
-                                $statusColors = [
-                                    'open' => 'bg-gray-100 text-gray-700',
-                                    'in_progress' => 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
-                                    'done' => 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-400',
-                                    'cancelled' => 'bg-gray-200 text-gray-700',
-                                ];
-                            @endphp
-
-                            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium
-                                {{ $statusColors[$task->status] ?? '' }}">
-                                {{ ucwords(str_replace('_',' ', $task->status)) }}
+                        <td class="p-3">
+                            <span class="text-xs px-2 py-1 rounded
+                                @if($task->status_color === 'green') bg-green-100 text-green-700
+                                @elseif($task->status_color === 'yellow') bg-yellow-100 text-yellow-700
+                                @elseif($task->status_color === 'red') bg-red-100 text-red-700
+                                @else bg-blue-100 text-blue-700
+                                @endif">
+                                {{ $task->status_label }}
                             </span>
                         </td>
 
                         {{-- ASSIGNED --}}
-                        <td class="px-6 py-3.5 text-gray-500 dark:text-gray-400">
+                        <td class="p-3">
                             {{ $task->assignedTo?->name ?? '-' }}
                         </td>
 
-                        {{-- DUE --}}
-                        <td class="px-6 py-3.5 text-gray-500 dark:text-gray-400">
-                            {{ $task->due_date?->format('d M Y') ?? '-' }}
+                        {{-- DUE DATE --}}
+                        <td class="p-3">
+                            @if($task->due_date)
+                                <span class="{{ $task->isOverdue() ? 'text-red-600 font-semibold' : '' }}">
+                                    {{ $task->due_date->format('d M Y') }}
+                                </span>
+                            @else
+                                -
+                            @endif
                         </td>
 
                         {{-- ACTION --}}
-                        <td class="px-6 py-3.5">
-                            <div class="flex justify-end gap-3">
+                        <td class="p-3 text-right space-x-1">
 
-                                <a href="{{ route('crm.tasks.edit', $task) }}"
-                                   class="text-brand-500 text-sm font-medium hover:text-brand-600">
-                                    Edit
-                                </a>
+                            <a href="{{ route('crm.tasks.show', $task) }}"
+                               class="text-blue-600 hover:underline">
+                                View
+                            </a>
 
-                                @if($task->status !== 'done')
-                                    <form method="POST" action="{{ route('crm.tasks.status', $task) }}">
-                                        @csrf
-                                        @method('PATCH')
+                            <a href="{{ route('crm.tasks.edit', $task) }}"
+                               class="text-yellow-600 hover:underline">
+                                Edit
+                            </a>
 
-                                        <input type="hidden" name="status" value="done">
+                            @if($task->status !== \App\CRM\Models\LeadTask::STATUS_DONE)
+                                <form action="{{ route('crm.tasks.start', $task) }}"
+                                      method="POST" class="inline">
+                                    @csrf
+                                    <button class="text-green-600 hover:underline">
+                                        Start
+                                    </button>
+                                </form>
+                            @endif
 
-                                        <button class="text-green-600 text-sm font-medium hover:text-green-700">
-                                            Done
-                                        </button>
-                                    </form>
-                                @endif
+                            @if($task->status !== \App\CRM\Models\LeadTask::STATUS_DONE)
+                                <form action="{{ route('crm.tasks.cancel', $task) }}"
+                                      method="POST" class="inline">
+                                    @csrf
+                                    <button class="text-red-600 hover:underline"
+                                            onclick="return confirm('Cancel this task?')">
+                                        Cancel
+                                    </button>
+                                </form>
+                            @endif
 
-                            </div>
                         </td>
 
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-10 text-center text-gray-500">
+                        <td colspan="7" class="p-6 text-center text-gray-500">
                             No tasks found
                         </td>
                     </tr>
                 @endforelse
-
             </tbody>
-
         </table>
+
     </div>
 
-    {{-- PAGINATION (STYLE LEADS) --}}
-    @if ($tasks->hasPages())
-        <div class="flex flex-col items-center justify-between border-t border-gray-200 px-5 py-4 sm:flex-row dark:border-gray-800">
-
-            <div class="pb-3 sm:pb-0 text-sm text-gray-500">
-                Showing
-                <span class="text-gray-800 dark:text-white/90">{{ $tasks->firstItem() }}</span>
-                to
-                <span class="text-gray-800 dark:text-white/90">{{ $tasks->lastItem() }}</span>
-                of
-                <span class="text-gray-800 dark:text-white/90">{{ $tasks->total() }}</span>
-            </div>
-
-            <div class="flex items-center gap-2">
-                {{ $tasks->links() }}
-            </div>
-
-        </div>
-    @endif
+    {{-- PAGINATION --}}
+    <div>
+        {{ $tasks->links() }}
+    </div>
 
 </div>
-
 @endsection
