@@ -12,6 +12,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -62,10 +64,20 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    public function group()
+     
+    public function group(): HasOne
     {
         return $this->hasOne(AuthGroup::class, 'user_id');
     }
+
+   
+    public function groups(): HasMany
+    {
+        return $this->hasMany(AuthGroup::class, 'user_id');
+    }
+
+
+
 
     public function permissions()
     {

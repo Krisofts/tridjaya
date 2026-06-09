@@ -62,7 +62,7 @@ class AuthGroupService
 
         if (!empty($groups)) {
             AuthGroup::insert(
-                array_map(fn ($group) => [
+                array_map(fn($group) => [
                     'user_id'    => $userId,
                     'group'      => $group,
                     'created_at' => now(),
@@ -86,9 +86,9 @@ class AuthGroupService
         return Cache::remember(
             $this->cacheKey($userId),
             now()->addHours(12),
-            fn () => AuthGroup::where('user_id', $userId)
+            fn() => AuthGroup::where('user_id', $userId)
                 ->pluck('group')
-                ->map(fn ($group) => strtolower(trim($group)))
+                ->map(fn($group) => strtolower(trim($group)))
                 ->unique()
                 ->values()
                 ->toArray()
@@ -103,7 +103,7 @@ class AuthGroupService
     public function getAvailableGroups(): array
     {
         return Cache::remember('auth:available_groups', 3600, function () {
-            return array_map('strtolower', config('auth_groups.groups', []));
+            return config('auth_groups.groups', []);
         });
     }
 
@@ -151,7 +151,7 @@ class AuthGroupService
     private function normalizeGroups(array $groups): array
     {
         return collect($groups)
-            ->map(fn ($group) => strtolower(trim($group)))
+            ->map(fn($group) => strtolower(trim($group)))
             ->unique()
             ->values()
             ->toArray();

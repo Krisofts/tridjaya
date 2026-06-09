@@ -4,29 +4,36 @@
 
 @section('content')
 
-<div class="p-6 max-w-7xl mx-auto space-y-6">
+<x-common.page-breadcrumb :pageTitle="$customer->name" />
+
+<div class="max-w-7xl mx-auto space-y-6">
 
     {{-- HEADER --}}
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">
+            <h1 class="text-2xl font-semibold text-gray-800 dark:text-white/90">
                 {{ $customer->name }}
             </h1>
-            <p class="text-sm text-gray-500">
-                Customer Detail & History
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Customer detail & transaction history
             </p>
         </div>
 
         <div class="flex gap-2">
 
             <a href="{{ route('crm.customers.edit', $customer) }}"
-               class="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600">
+               class="inline-flex items-center justify-center rounded-lg bg-warning-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-warning-600">
+
                 Edit
             </a>
 
             <a href="{{ route('crm.customers.index') }}"
-               class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
+               class="inline-flex items-center justify-center rounded-lg border border-gray-300
+                      bg-white px-4 py-2.5 text-sm font-medium text-gray-700
+                      hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800
+                      dark:text-gray-300 dark:hover:bg-gray-700">
+
                 Back
             </a>
 
@@ -40,39 +47,45 @@
         <div class="space-y-6">
 
             {{-- CUSTOMER INFO --}}
-            <div class="bg-white rounded-xl shadow p-5 space-y-4">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
 
-                <h2 class="font-semibold text-gray-900">Customer Info</h2>
+                <h2 class="font-semibold text-gray-800 dark:text-white/90 mb-4">
+                    Customer Info
+                </h2>
 
-                <div class="text-sm space-y-3">
+                <div class="space-y-3 text-sm">
 
                     <div>
-                        <div class="text-gray-500">Phone</div>
-                        <div class="font-medium">{{ $customer->phone ?? '-' }}</div>
+                        <div class="text-gray-500 dark:text-gray-400">Phone</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
+                            {{ $customer->phone ?? '-' }}
+                        </div>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Type</div>
-                        <div class="font-medium">{{ $customer->type ?? '-' }}</div>
+                        <div class="text-gray-500 dark:text-gray-400">Type</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
+                            {{ $customer->type ?? '-' }}
+                        </div>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Converted At</div>
-                        <div class="font-medium">
+                        <div class="text-gray-500 dark:text-gray-400">Converted At</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
                             {{ $customer->converted_at?->format('d M Y H:i') ?? '-' }}
                         </div>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Converted By</div>
-                        <div class="font-medium">
+                        <div class="text-gray-500 dark:text-gray-400">Converted By</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
                             {{ $customer->convertedBy?->name ?? '-' }}
                         </div>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Created By</div>
-                        <div class="font-medium">
+                        <div class="text-gray-500 dark:text-gray-400">Created By</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
                             {{ $customer->createdBy?->name ?? '-' }}
                         </div>
                     </div>
@@ -82,30 +95,37 @@
             </div>
 
             {{-- ADDRESS --}}
-            <div class="bg-white rounded-xl shadow p-5">
-                <h2 class="font-semibold mb-2">Address</h2>
-                <p class="text-sm text-gray-600 whitespace-pre-line">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+
+                <h2 class="font-semibold text-gray-800 dark:text-white/90 mb-2">
+                    Address
+                </h2>
+
+                <p class="text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line">
                     {{ $customer->address ?? '-' }}
                 </p>
+
             </div>
 
             {{-- SOURCE LEAD --}}
-            <div class="bg-white rounded-xl shadow p-5">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
 
-                <h2 class="font-semibold mb-3">Source Lead</h2>
+                <h2 class="font-semibold text-gray-800 dark:text-white/90 mb-4">
+                    Source Lead
+                </h2>
 
-                <div class="text-sm space-y-2">
+                <div class="space-y-3 text-sm">
 
                     <div>
-                        <div class="text-gray-500">Lead Name</div>
-                        <div class="font-medium">
+                        <div class="text-gray-500 dark:text-gray-400">Lead Name</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
                             {{ $customer->lead->name ?? '-' }}
                         </div>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Lead Status</div>
-                        <div class="font-medium">
+                        <div class="text-gray-500 dark:text-gray-400">Lead Status</div>
+                        <div class="font-medium text-gray-800 dark:text-white/90">
                             {{ $customer->lead->status ?? '-' }}
                         </div>
                     </div>
@@ -120,9 +140,9 @@
         <div class="lg:col-span-2 space-y-6">
 
             {{-- TRANSACTIONS --}}
-            <div class="bg-white rounded-xl shadow p-5">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
 
-                <h2 class="font-semibold text-gray-900 mb-4">
+                <h2 class="font-semibold text-gray-800 dark:text-white/90 mb-4">
                     Transactions History
                 </h2>
 
@@ -130,25 +150,25 @@
 
                     @forelse($customer->transactions as $trx)
 
-                        <div class="border rounded-lg p-3 flex justify-between">
+                        <div class="flex items-center justify-between rounded-xl border border-gray-100 p-4 dark:border-gray-800">
 
                             <div>
-                                <div class="font-medium">
-                                    {{ $trx->type }}
+                                <div class="font-medium text-gray-800 dark:text-white/90">
+                                    {{ ucfirst($trx->type) }}
                                 </div>
 
-                                <div class="text-xs text-gray-500">
-                                    {{ $trx->status }}
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ ucfirst($trx->status) }}
                                 </div>
                             </div>
 
                             <div class="text-right">
-                                <div class="font-semibold">
+                                <div class="font-semibold text-gray-800 dark:text-white/90">
                                     Rp {{ number_format($trx->amount, 0, ',', '.') }}
                                 </div>
 
                                 @if($trx->type === 'credit')
-                                    <div class="text-xs text-gray-500">
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">
                                         {{ $trx->tenor_months }}x • Rp {{ number_format($trx->monthly_payment, 0, ',', '.') }}
                                     </div>
                                 @endif
@@ -157,9 +177,11 @@
                         </div>
 
                     @empty
-                        <div class="text-center text-gray-500 py-6">
-                            No transactions
+
+                        <div class="text-center text-gray-500 dark:text-gray-400 py-6">
+                            No transactions found
                         </div>
+
                     @endforelse
 
                 </div>
@@ -167,22 +189,24 @@
             </div>
 
             {{-- SUMMARY --}}
-            <div class="bg-white rounded-xl shadow p-5">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
 
-                <h2 class="font-semibold mb-4">Summary</h2>
+                <h2 class="font-semibold text-gray-800 dark:text-white/90 mb-4">
+                    Summary
+                </h2>
 
                 <div class="grid grid-cols-2 gap-4 text-sm">
 
-                    <div class="p-3 bg-gray-50 rounded-lg">
-                        <div class="text-gray-500">Total Transaction</div>
-                        <div class="font-bold">
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-900">
+                        <div class="text-gray-500 dark:text-gray-400">Total Transaction</div>
+                        <div class="font-bold text-gray-800 dark:text-white/90">
                             Rp {{ number_format($customer->totalTransactionAmount(), 0, ',', '.') }}
                         </div>
                     </div>
 
-                    <div class="p-3 bg-gray-50 rounded-lg">
-                        <div class="text-gray-500">Cash Revenue</div>
-                        <div class="font-bold">
+                    <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-900">
+                        <div class="text-gray-500 dark:text-gray-400">Cash Revenue</div>
+                        <div class="font-bold text-gray-800 dark:text-white/90">
                             Rp {{ number_format($customer->totalCashRevenue(), 0, ',', '.') }}
                         </div>
                     </div>

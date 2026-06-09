@@ -4,218 +4,233 @@
 
 @section('content')
 
-<div class="p-6 max-w-7xl mx-auto space-y-6">
+<x-common.page-breadcrumb :pageTitle="$lead->name" />
 
-    {{-- HEADER --}}
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">
-                {{ $lead->name }}
-            </h1>
-            <p class="text-sm text-gray-500">
-                Lead detail, transactions & activity timeline
-            </p>
-        </div>
-
-        <div class="flex gap-2 flex-wrap">
-
-            <a href="{{ route('crm.leads.edit', $lead) }}"
-               class="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600">
-                Edit
-            </a>
-
-            <a href="{{ route('crm.leads.index') }}"
-               class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
-                Back
-            </a>
-
-        </div>
-
-    </div>
+<div class="max-w-7xl mx-auto space-y-6">
 
     {{-- MAIN GRID --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        {{-- LEFT --}}
-        <div class="space-y-6">
+        {{-- LEFT: WORKFLOW (PRIMARY) --}}
+        <div class="lg:col-span-8 space-y-6">
+
+            {{-- PROFILE --}}
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+
+                @php
+                    $initial = strtoupper(substr($lead->name, 0, 1));
+                    $phone = preg_replace('/[^0-9]/', '', $lead->phone);
+                    $wa = $phone ? "https://wa.me/62" . ltrim($phone, '0') : '#';
+                @endphp
+
+                <div class="flex items-center justify-between">
+
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-700 dark:text-white font-bold">
+                            {{ $initial }}
+                        </div>
+
+                        <div>
+                            <p class="font-semibold text-gray-900 dark:text-white">
+                                {{ $lead->name }}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Lead Profile
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+
+                        <a href="{{ $wa }}" target="_blank"
+                           class="px-4 py-2 text-sm rounded-xl bg-green-500 text-white hover:bg-green-600 transition">
+                            WhatsApp
+                        </a>
+
+                        <a href="tel:{{ $lead->phone }}"
+                           class="px-4 py-2 text-sm rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition">
+                            Call
+                        </a>
+
+                        <form method="POST" action="#">
+                            @csrf
+                            <button class="px-4 py-2 text-sm rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition">
+                                Convert
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {{-- WORKFLOW --}}
+            <div x-data="{ tab: 'activity' }"
+                 class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+
+                {{-- HEADER --}}
+                <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-5 py-3">
+
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+                        Workflow & Activity
+                    </h2>
+
+                    <div class="flex gap-2 text-xs">
+
+                        @foreach(['activity','notes','calls','tasks'] as $t)
+                            <button
+                                @click="tab='{{ $t }}'"
+                                class="px-3 py-1.5 rounded-lg transition"
+                                :class="tab==='{{ $t }}'
+                                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'">
+                                {{ ucfirst($t) }}
+                            </button>
+                        @endforeach
+
+                    </div>
+
+                </div>
+
+                {{-- CONTENT --}}
+                <div class="p-5 md:p-6 min-h-[420px]">
+
+                    <div x-show="tab==='activity'" class="space-y-4">
+
+                        @forelse($lead->activities as $activity)
+                            <div class="flex gap-3">
+                                <div class="w-2 h-2 mt-2 rounded-full bg-blue-500"></div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ $activity->title }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ $activity->created_at?->format('d M Y H:i') }}
+                                    </p>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-500">No activity yet</p>
+                        @endforelse
+
+                    </div>
+
+                    <div x-show="tab==='notes'" class="text-sm text-gray-500">
+                        Notes workflow
+                    </div>
+
+                    <div x-show="tab==='calls'" class="text-sm text-gray-500">
+                        Calls workflow
+                    </div>
+
+                    <div x-show="tab==='tasks'" class="text-sm text-gray-500">
+                        Tasks workflow
+                    </div>
+
+                </div>
+
+            </div>
+
+            {{-- TRANSACTIONS --}}
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                    Transactions
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                    @forelse($lead->transactions ?? [] as $trx)
+
+                        <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ $trx->type }}
+                            </p>
+
+                            <p class="text-xs text-gray-500 mt-1">
+                                Rp {{ number_format($trx->amount, 0, ',', '.') }}
+                            </p>
+
+                        </div>
+
+                    @empty
+                        <p class="text-sm text-gray-500">No transactions</p>
+                    @endforelse
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {{-- RIGHT: INFO (SECONDARY) --}}
+        <div class="lg:col-span-4 space-y-6">
 
             {{-- LEAD INFO --}}
-            <div class="bg-white rounded-xl shadow p-5 space-y-4">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
 
-                <h2 class="font-semibold text-gray-900">Lead Info</h2>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800"></div>
+
+                    <div>
+                        <h2 class="text-sm font-semibold text-gray-900 dark:text-white">
+                            Lead Info
+                        </h2>
+                        <p class="text-xs text-gray-500">Customer detail</p>
+                    </div>
+                </div>
 
                 <div class="space-y-3 text-sm">
 
                     <div>
-                        <div class="text-gray-500">Phone</div>
-                        <div class="font-medium">{{ $lead->phone ?? '-' }}</div>
+                        <p class="text-xs text-gray-500">Phone</p>
+                        <p class="font-medium text-gray-900 dark:text-white">{{ $lead->phone ?? '-' }}</p>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Status</div>
-                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100">
+                        <p class="text-xs text-gray-500">Status</p>
+                        <span class="inline-flex px-2 py-1 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
                             {{ config('crm.lead_status')[$lead->status] ?? $lead->status }}
                         </span>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Source</div>
-                        <div>{{ config('crm.lead_source')[$lead->source] ?? '-' }}</div>
+                        <p class="text-xs text-gray-500">Source</p>
+                        <p class="font-medium text-gray-900 dark:text-white">
+                            {{ config('crm.lead_source')[$lead->source] ?? '-' }}
+                        </p>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Interest</div>
-                        <div>{{ config('crm.lead_interest')[$lead->interest] ?? '-' }}</div>
+                        <p class="text-xs text-gray-500">Interest</p>
+                        <p class="font-medium text-gray-900 dark:text-white">
+                            {{ config('crm.lead_interest')[$lead->interest] ?? '-' }}
+                        </p>
                     </div>
 
                     <div>
-                        <div class="text-gray-500">Assigned To</div>
-                        <div>{{ $lead->assignedTo?->name ?? '-' }}</div>
-                    </div>
-
-                    <div>
-                        <div class="text-gray-500">Created By</div>
-                        <div>{{ $lead->createdBy?->name ?? '-' }}</div>
-                    </div>
-
-                    <div>
-                        <div class="text-gray-500">Estimated Value</div>
-                        <div>
-                            Rp {{ number_format((float) $lead->estimated_value, 0, ',', '.') }}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="text-gray-500">Created At</div>
-                        <div>{{ $lead->created_at?->format('d M Y H:i') }}</div>
+                        <p class="text-xs text-gray-500">Assigned</p>
+                        <p class="font-medium text-gray-900 dark:text-white">
+                            {{ $lead->assignedTo?->name ?? '-' }}
+                        </p>
                     </div>
 
                 </div>
 
-            </div>
-
-            {{-- ADDRESS --}}
-            <div class="bg-white rounded-xl shadow p-5">
-                <h2 class="font-semibold mb-2">Address</h2>
-                <p class="text-sm text-gray-600 whitespace-pre-line">
-                    {{ $lead->address ?? '-' }}
-                </p>
             </div>
 
             {{-- NOTES --}}
-            <div class="bg-white rounded-xl shadow p-5">
-                <h2 class="font-semibold mb-2">Notes</h2>
-                <p class="text-sm text-gray-600 whitespace-pre-line">
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
+
+                <h2 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    Notes
+                </h2>
+
+                <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
                     {{ $lead->notes ?? '-' }}
                 </p>
-            </div>
-
-        </div>
-
-        {{-- RIGHT --}}
-        <div class="lg:col-span-2 space-y-6">
-
-            {{-- TRANSACTIONS --}}
-            <div class="bg-white rounded-xl shadow p-5">
-
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="font-semibold text-gray-900">
-                        Transactions
-                    </h2>
-
-                    <a href="{{ route('crm.leads.transactions.create', $lead) }}"
-                       class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm">
-                        + Add Transaction
-                    </a>
-                </div>
-
-                <div class="space-y-3">
-
-                    @forelse($lead->transactions ?? [] as $trx)
-
-                        <div class="border rounded-lg p-3 flex justify-between items-center">
-
-                            <div>
-                                <div class="font-medium text-gray-900">
-                                    {{ config('crm.transaction_type')[$trx->type] ?? $trx->type }}
-                                </div>
-
-                                <div class="text-xs text-gray-500">
-                                    {{ config('crm.transaction_status')[$trx->status] ?? $trx->status }}
-                                </div>
-                            </div>
-
-                            <div class="text-right">
-                                <div class="font-semibold">
-                                    Rp {{ number_format($trx->amount, 0, ',', '.') }}
-                                </div>
-
-                                @if($trx->type === 'credit')
-                                    <div class="text-xs text-gray-500">
-                                        {{ $trx->tenor_months }}x • Rp {{ number_format($trx->monthly_payment, 0, ',', '.') }}
-                                    </div>
-                                @endif
-                            </div>
-
-                        </div>
-
-                    @empty
-                        <div class="text-center text-gray-500 py-6">
-                            No transactions yet
-                        </div>
-                    @endforelse
-
-                </div>
-
-            </div>
-
-            {{-- ACTIVITY --}}
-            <div class="bg-white rounded-xl shadow p-5">
-
-                <h2 class="font-semibold mb-4">Activity Timeline</h2>
-
-                <div class="space-y-4">
-
-                    @forelse($lead->activities as $activity)
-
-                        <div class="flex gap-3 border-l-2 border-gray-200 pl-4">
-
-                            <div class="w-2 h-2 mt-2 rounded-full bg-blue-600"></div>
-
-                            <div class="flex-1">
-
-                                <div class="flex justify-between">
-                                    <div class="font-medium">
-                                        {{ $activity->title }}
-                                    </div>
-
-                                    <div class="text-xs text-gray-500">
-                                        {{ $activity->created_at?->format('d M Y H:i') }}
-                                    </div>
-                                </div>
-
-                                @if($activity->description)
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        {{ $activity->description }}
-                                    </p>
-                                @endif
-
-                                <div class="text-xs text-gray-400 mt-2">
-                                    by {{ $activity->createdBy?->name ?? 'System' }}
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    @empty
-                        <div class="text-center text-gray-500 py-10">
-                            No activity found
-                        </div>
-                    @endforelse
-
-                </div>
 
             </div>
 
