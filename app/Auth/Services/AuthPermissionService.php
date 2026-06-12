@@ -4,27 +4,25 @@ namespace App\Auth\Services;
 
 use App\Auth\Models\AuthPermission;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class AuthPermissionService
 {
-    private const CACHE_PREFIX = 'user:%d:permissions';
+    private const CACHE_PREFIX = 'auth:user:%d:permissions';
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | ADD PERMISSION
-    |---------------------------------------------------
+    |--------------------------------
     */
-    public function addPermission(
-        int $userId,
-        string ...$permissions
-    ): bool {
-        $permissions = $this->validatePermissions(
-            $permissions
-        );
+    public function addPermission(int $userId, string ...$permissions): bool
+    {
+        $permissions = $this->normalize($permissions);
+
+        $this->validate($permissions);
 
         foreach ($permissions as $permission) {
-
             AuthPermission::firstOrCreate([
                 'user_id'    => $userId,
                 'permission' => $permission,
@@ -37,20 +35,15 @@ class AuthPermissionService
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | REMOVE PERMISSION
-    |---------------------------------------------------
+    |--------------------------------
     */
-    public function removePermission(
-        int $userId,
-        string ...$permissions
-    ): bool {
-        $permissions = $this->normalizePermissions(
-            $permissions
-        );
+    public function removePermission(int $userId, string ...$permissions): bool
+    {
+        $permissions = $this->normalize($permissions);
 
-        AuthPermission::query()
-            ->where('user_id', $userId)
+        AuthPermission::where('user_id', $userId)
             ->whereIn('permission', $permissions)
             ->delete();
 
@@ -60,35 +53,30 @@ class AuthPermissionService
     }
 
     /*
-    |---------------------------------------------------
-    | SYNC PERMISSIONS
-    |---------------------------------------------------
+    |--------------------------------
+    | SYNC PERMISSION (FULL REPLACE)
+    |--------------------------------
     */
-    public function syncPermissions(
-        int $userId,
-        string ...$permissions
-    ): bool {
-        $permissions = $this->validatePermissions(
-            $permissions
-        );
+    public function syncPermissions(int $userId, string ...$permissions): bool
+    {
+        $permissions = $this->normalize($permissions);
+        $this->validate($permissions);
 
-        AuthPermission::query()
-            ->where('user_id', $userId)
-            ->delete();
+        DB::transaction(function () use ($userId, $permissions) {
 
-        if (! empty($permissions)) {
+            AuthPermission::where('user_id', $userId)->delete();
 
-            AuthPermission::insert(
-                collect($permissions)
-                    ->map(fn ($permission) => [
+            if (!empty($permissions)) {
+                AuthPermission::insert(
+                    array_map(fn ($permission) => [
                         'user_id'    => $userId,
                         'permission' => $permission,
                         'created_at' => now(),
                         'updated_at' => now(),
-                    ])
-                    ->all()
-            );
-        }
+                    ], $permissions)
+                );
+            }
+        });
 
         $this->forgetCache($userId);
 
@@ -96,36 +84,31 @@ class AuthPermissionService
     }
 
     /*
-    |---------------------------------------------------
-    | GET USER PERMISSIONS (CACHED)
-    |---------------------------------------------------
+    |--------------------------------
+    | GET PERMISSIONS (CACHED)
+    |--------------------------------
     */
-    public function getPermissions(
-        int $userId
-    ): array {
+    public function getPermissions(int $userId): array
+    {
         return Cache::remember(
             $this->cacheKey($userId),
             now()->addHours(12),
-            fn () => AuthPermission::query()
-                ->where('user_id', $userId)
+            fn () => AuthPermission::where('user_id', $userId)
                 ->pluck('permission')
-                ->map(
-                    fn ($permission) =>
-                    strtolower(trim($permission))
-                )
+                ->map(fn ($p) => strtolower(trim($p)))
+                ->unique()
+                ->values()
                 ->toArray()
         );
     }
 
     /*
-    |---------------------------------------------------
-    | CHECK DIRECT PERMISSION
-    |---------------------------------------------------
+    |--------------------------------
+    | CHECK PERMISSION
+    |--------------------------------
     */
-    public function hasPermission(
-        int $userId,
-        string $permission
-    ): bool {
+    public function hasPermission(int $userId, string $permission): bool
+    {
         return in_array(
             strtolower(trim($permission)),
             $this->getPermissions($userId),
@@ -134,79 +117,62 @@ class AuthPermissionService
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | VALIDATION
-    |---------------------------------------------------
+    |--------------------------------
     */
-    private function validatePermissions(
-        array $permissions
-    ): array {
-        $permissions = $this->normalizePermissions(
-            $permissions
-        );
+    private function validate(array $permissions): void
+    {
+        if (empty($permissions)) {
+            return;
+        }
 
-        $availablePermissions = array_map(
+        $available = array_map(
             'strtolower',
-            array_keys(
-                config('auth_groups.permissions', [])
-            )
+            array_keys(config('auth_groups.permissions', []))
         );
 
         foreach ($permissions as $permission) {
-
-            if (
-                ! in_array(
-                    $permission,
-                    $availablePermissions,
-                    true
-                )
-            ) {
+            if (!in_array($permission, $available, true)) {
                 throw new InvalidArgumentException(
-                    "Permission '{$permission}' not found."
+                    "Permission '{$permission}' not found in config."
                 );
             }
         }
-
-        return $permissions;
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | NORMALIZER
-    |---------------------------------------------------
+    |--------------------------------
     */
-    private function normalizePermissions(
-        array $permissions
-    ): array {
+    private function normalize(array $permissions): array
+    {
         return collect($permissions)
-            ->map(
-                fn ($permission) =>
-                strtolower(trim($permission))
-            )
+            ->map(fn ($p) => strtolower(trim($p)))
+            ->filter()
             ->unique()
             ->values()
-            ->all();
+            ->toArray();
     }
 
     /*
-    |---------------------------------------------------
-    | CACHE
-    |---------------------------------------------------
+    |--------------------------------
+    | CACHE KEY
+    |--------------------------------
     */
-    private function cacheKey(
-        int $userId
-    ): string {
-        return sprintf(
-            self::CACHE_PREFIX,
-            $userId
-        );
+    private function cacheKey(int $userId): string
+    {
+        return sprintf(self::CACHE_PREFIX, $userId);
     }
 
-    private function forgetCache(
-        int $userId
-    ): void {
-        Cache::forget(
-            $this->cacheKey($userId)
-        );
+    /*
+    |--------------------------------
+    | CLEAR CACHE
+    |--------------------------------
+    */
+    private function forgetCache(int $userId): void
+    {
+        Cache::forget($this->cacheKey($userId));
     }
 }

@@ -5,9 +5,14 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use App\Auth\Services\AuthService;
 
 class GroupMiddleware
 {
+    public function __construct(
+        protected AuthService $auth
+    ) {}
+
     /**
      * Handle an incoming request.
      */
@@ -17,13 +22,11 @@ class GroupMiddleware
         ...$groups
     ): Response {
 
-        $user = auth()->user();
-
-        if (! $user) {
+        if (! $this->auth->check()) {
             abort(401);
         }
 
-        if (! $user->inGroup(...$groups)) {
+        if (! $this->auth->inGroup(...$groups)) {
             abort(403, 'Unauthorized');
         }
 

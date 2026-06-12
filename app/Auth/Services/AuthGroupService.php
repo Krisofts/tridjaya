@@ -11,13 +11,14 @@ class AuthGroupService
     private const CACHE_PREFIX = 'auth:user:%d:groups';
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | ADD GROUP
-    |---------------------------------------------------
+    |--------------------------------
     */
     public function addGroup(int $userId, string ...$groups): bool
     {
-        $groups = $this->validateGroups($groups);
+        $groups = $this->normalize($groups);
+        $this->validate($groups);
 
         foreach ($groups as $group) {
             AuthGroup::firstOrCreate([
@@ -32,13 +33,13 @@ class AuthGroupService
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | REMOVE GROUP
-    |---------------------------------------------------
+    |--------------------------------
     */
     public function removeGroup(int $userId, string ...$groups): bool
     {
-        $groups = $this->normalizeGroups($groups);
+        $groups = $this->normalize($groups);
 
         AuthGroup::where('user_id', $userId)
             ->whereIn('group', $groups)
@@ -50,19 +51,20 @@ class AuthGroupService
     }
 
     /*
-    |---------------------------------------------------
-    | SYNC GROUPS
-    |---------------------------------------------------
+    |--------------------------------
+    | SYNC GROUPS (REPLACE ALL)
+    |--------------------------------
     */
     public function syncGroups(int $userId, string ...$groups): bool
     {
-        $groups = $this->validateGroups($groups);
+        $groups = $this->normalize($groups);
+        $this->validate($groups);
 
         AuthGroup::where('user_id', $userId)->delete();
 
         if (!empty($groups)) {
             AuthGroup::insert(
-                array_map(fn($group) => [
+                array_map(fn ($group) => [
                     'user_id'    => $userId,
                     'group'      => $group,
                     'created_at' => now(),
@@ -77,18 +79,18 @@ class AuthGroupService
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | GET GROUPS (CACHED)
-    |---------------------------------------------------
+    |--------------------------------
     */
     public function getGroups(int $userId): array
     {
         return Cache::remember(
             $this->cacheKey($userId),
             now()->addHours(12),
-            fn() => AuthGroup::where('user_id', $userId)
+            fn () => AuthGroup::where('user_id', $userId)
                 ->pluck('group')
-                ->map(fn($group) => strtolower(trim($group)))
+                ->map(fn ($g) => strtolower(trim($g)))
                 ->unique()
                 ->values()
                 ->toArray()
@@ -96,9 +98,9 @@ class AuthGroupService
     }
 
     /*
-    |---------------------------------------------------
-    | AVAILABLE GROUPS (FROM CONFIG)
-    |---------------------------------------------------
+    |--------------------------------
+    | AVAILABLE GROUPS (CONFIG)
+    |--------------------------------
     */
     public function getAvailableGroups(): array
     {
@@ -108,65 +110,76 @@ class AuthGroupService
     }
 
     /*
-    |---------------------------------------------------
-    | DEFAULT GROUP
-    |---------------------------------------------------
+    |--------------------------------
+    | ADD DEFAULT GROUP
+    |--------------------------------
     */
     public function addToDefaultGroup(int $userId): bool
     {
-        return $this->addGroup(
-            $userId,
-            config('auth_groups.defaultGroup')
-        );
+        $default = config('auth_groups.defaultGroup');
+
+        if (!$default) {
+            throw new InvalidArgumentException('Default group is not configured.');
+        }
+
+        return $this->addGroup($userId, $default);
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | VALIDATION
-    |---------------------------------------------------
+    |--------------------------------
     */
-    private function validateGroups(array $groups): array
+    private function validate(array $groups): void
     {
-        $groups = $this->normalizeGroups($groups);
+        if (empty($groups)) {
+            return;
+        }
 
-        $availableGroups = array_map(
+        $available = array_map(
             'strtolower',
             array_keys(config('auth_groups.groups', []))
         );
 
         foreach ($groups as $group) {
-            if (!in_array($group, $availableGroups, true)) {
-                throw new InvalidArgumentException("Group '{$group}' not found.");
+            if (!in_array($group, $available, true)) {
+                throw new InvalidArgumentException(
+                    "Group '{$group}' not found in config."
+                );
             }
         }
-
-        return $groups;
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------
     | NORMALIZER
-    |---------------------------------------------------
+    |--------------------------------
     */
-    private function normalizeGroups(array $groups): array
+    private function normalize(array $groups): array
     {
         return collect($groups)
-            ->map(fn($group) => strtolower(trim($group)))
+            ->map(fn ($g) => strtolower(trim($g)))
+            ->filter()
             ->unique()
             ->values()
             ->toArray();
     }
 
     /*
-    |---------------------------------------------------
-    | CACHE HELPERS
-    |---------------------------------------------------
+    |--------------------------------
+    | CACHE KEY
+    |--------------------------------
     */
     private function cacheKey(int $userId): string
     {
         return sprintf(self::CACHE_PREFIX, $userId);
     }
 
+    /*
+    |--------------------------------
+    | CLEAR CACHE
+    |--------------------------------
+    */
     private function forgetCache(int $userId): void
     {
         Cache::forget($this->cacheKey($userId));

@@ -1,78 +1,56 @@
 <?php
 
-namespace App\User\Policies;
+namespace App\Policies;
 
 use App\User\Models\User;
+use App\Auth\Services\AuthService;
 
 class UserPolicy
 {
-    /*
-    |---------------------------------------------------
-    | BASE PERMISSION
-    |---------------------------------------------------
-    */
+    public function __construct(
+        protected AuthService $auth
+    ) {}
+
     public function viewAny(User $authUser): bool
     {
-        return $authUser->can('users.view');
+        return $this->auth->canAccess('user.view');
     }
 
-    public function view(User $authUser, User $targetUser): bool
+    public function view(User $authUser, User $user): bool
     {
-        return $authUser->can('users.view');
+        return $this->auth->canAccess('user.view');
     }
 
     public function create(User $authUser): bool
     {
-        return $authUser->can('users.create');
+        return $this->auth->canAccess('user.create');
     }
 
-    /*
-    |---------------------------------------------------
-    | UPDATE
-    |---------------------------------------------------
-    */
-    public function update(User $authUser, User $targetUser): bool
+    public function update(User $authUser, User $user): bool
     {
-        if ($this->isProtectedSuperadmin($authUser, $targetUser)) {
+        if ($authUser->id === $user->id) {
+            return true;
+        }
+
+        return $this->auth->canAccess('user.update');
+    }
+
+    public function delete(User $authUser, User $user): bool
+    {
+        if ($authUser->id === $user->id) {
             return false;
         }
 
-        return $authUser->can('users.edit');
+        return $this->auth->canAccess('user.delete');
     }
 
-    /*
-    |---------------------------------------------------
-    | DELETE
-    |---------------------------------------------------
-    */
-    public function delete(User $authUser, User $targetUser): bool
+    public function restore(User $authUser, User $user): bool
     {
-        if ($this->isProtectedSuperadmin($authUser, $targetUser)) {
-            return false;
-        }
-
-        return $authUser->can('users.delete');
+        return $this->auth->canAccess('user.restore');
     }
 
-    /*
-    |---------------------------------------------------
-    | HELPER METHODS
-    |---------------------------------------------------
-    */
-    private function isSuperadmin(User $user): bool
+    public function forceDelete(User $authUser, User $user): bool
     {
-        return $user->groups()
-            ->where('group', 'superadmin')
-            ->exists();
-    }
-
-    /**
-     * Rule:
-     * - Superadmin hanya boleh diubah/dihapus oleh superadmin juga
-     */
-    private function isProtectedSuperadmin(User $authUser, User $targetUser): bool
-    {
-        return $this->isSuperadmin($targetUser)
-            && !$this->isSuperadmin($authUser);
+        return $this->auth->canAccess('user.force_delete');
     }
 }

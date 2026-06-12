@@ -9,18 +9,23 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('auth_groups_users', function (Blueprint $table) {
-            $table->id();
+    $table->id();
 
-            $table->foreignId('user_id')
-                ->constrained('users')
-                ->cascadeOnDelete();
+    $table->foreignId('user_id')
+        ->constrained('users')
+        ->cascadeOnDelete();
 
-            $table->string('group'); // admin, superadmin, user
+    $table->string('group');
 
-            $table->timestamps();
+    $table->timestamps();
 
-            $table->index('group');
-        });
+    $table->index('group');
+
+    $table->unique([
+        'user_id',
+        'group',
+    ]);
+});
     }
 
     public function down(): void

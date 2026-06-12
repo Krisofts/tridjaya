@@ -1,0 +1,1 @@
+{!! str_replace('<svg', '<svg class="'.$class.'"', $svg()) !!}

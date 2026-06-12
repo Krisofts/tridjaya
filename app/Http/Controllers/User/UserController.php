@@ -3,141 +3,112 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\User\StoreUserRequest;
-use App\Http\Requests\User\UpdateUserRequest;
 use App\User\Models\User;
-use App\User\Filters\UserFilter;
-use App\User\Services\UserService;
-use App\Auth\Services\AuthGroupService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\View\View;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    use AuthorizesRequests;
-
-    public function __construct(
-        protected UserService $userService,
-        protected AuthGroupService $authGroupService,
-    ) {}
+    /*
+    |--------------------------------------------------------------------------
+    | POLICY AUTO BINDING
+    |--------------------------------------------------------------------------
+    |
+    | Akan otomatis pakai:
+    | - viewAny   -> index
+    | - view      -> show
+    | - create    -> create/store
+    | - update    -> edit/update
+    | - delete    -> destroy
+    |
+    */
+    public function __construct()
+    {
+        $this->authorizeResource(User::class, 'user');
+    }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     | LIST USER
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    public function index(UserFilter $filter): View
+    public function index()
     {
-        $this->authorize('viewAny', User::class);
+        $users = User::latest()->paginate(10);
 
-        $users = $this->userService->paginate($filter, 20);
-
-        return view('user.index', compact('users'));
+        return view('users.index', compact('users'));
     }
 
     /*
-    |---------------------------------------------------
-    | CREATE FORM
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | FORM CREATE
+    |--------------------------------------------------------------------------
     */
-    public function create(): View
+    public function create()
     {
-        $this->authorize('create', User::class);
-
-        return view('user.create', [
-            'branches' => app(\App\Branch\Models\Branch::class)
-                ->where('is_active', true)
-                ->get(),
-        ]);
+        return view('users.create');
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     | STORE USER
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    public function store(StoreUserRequest $request): RedirectResponse
+    public function store(Request $request)
     {
-        $this->authorize('create', User::class);
-
-        $this->userService->create(
-            $request->validated()
-        );
-
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User created successfully.');
-    }
-
-    /*
-    |---------------------------------------------------
-    | SHOW USER
-    |---------------------------------------------------
-    */
-    public function show(User $user): View
-    {
-        $this->authorize('view', $user);
-
-        return view('user.show', compact('user'));
-    }
-
-    /*
-    |---------------------------------------------------
-    | EDIT FORM
-    |---------------------------------------------------
-    */
-    public function edit(User $user): View
-    {
-        $this->authorize('update', $user);
-
-        return view('user.edit', [
-            'user' => $user,
-            'groups' => $this->authGroupService->getAvailableGroups(),
-            'branches' => app(\App\Branch\Models\Branch::class)
-                ->where('is_active', true)
-                ->get(),
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:100'],
+            'email'    => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'min:6'],
         ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+
+        User::create($validated);
+
+        return redirect()
+            ->route('users.index')
+            ->with('success', 'User created successfully');
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | FORM EDIT
+    |--------------------------------------------------------------------------
+    */
+    public function edit(User $user)
+    {
+        return view('users.edit', compact('user'));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | UPDATE USER
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    public function update(Request $request, User $user)
     {
-        $this->authorize('update', $user);
+        $validated = $request->validate([
+            'name'  => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
+        ]);
 
-        $data = $request->validated();
-
-        // update user data
-        $this->userService->update($user->id, $data);
-
-        // sync groups
-        $this->authGroupService->syncGroups(
-            $user->id,
-            ...($data['groups'] ?? [])
-        );
+        $user->update($validated);
 
         return redirect()
             ->route('users.index')
-            ->with('success', 'User updated successfully.');
+            ->with('success', 'User updated successfully');
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     | DELETE USER
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user)
     {
-        $this->authorize('delete', $user);
+        $user->delete();
 
-        $this->userService->delete($user->id);
-
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User deleted successfully.');
+        return back()->with('success', 'User deleted successfully');
     }
 }

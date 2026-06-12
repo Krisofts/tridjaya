@@ -2,35 +2,27 @@
 
 namespace App\User\Models;
 
-use App\Auth\Traits\Authorizable;
-use App\Auth\Models\AuthGroup;
-use App\Auth\Models\AuthPermission;
-use App\Branch\Models\Branch;
-use App\CRM\Models\Lead;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, Authorizable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /*
     |--------------------------------------------------------------------------
     | MASS ASSIGNMENT
-    |--------------------------------------------------------------------------
+    |-------------------------------------------------------------------------- 
     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'branch_id',
-        'force_password_change',
-        'password_changed_at',
     ];
 
     /*
@@ -45,93 +37,103 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
+    | APPENDS (UI HELPERS)
+    |--------------------------------------------------------------------------
+    */
+    protected $appends = [
+        'initials',
+        'branch_name',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
     | CASTS
     |--------------------------------------------------------------------------
     */
     protected function casts(): array
     {
         return [
-            'email_verified_at'     => 'datetime',
-            'password'              => 'hashed',
-            'password_changed_at'   => 'datetime',
-            'force_password_change' => 'boolean',
+            'email_verified_at' => 'datetime',
+            'password'          => 'hashed',
         ];
     }
 
     /*
     |--------------------------------------------------------------------------
-    | RELATIONS
+    | ACCESSORS
     |--------------------------------------------------------------------------
     */
 
-     
-    public function group(): HasOne
+    public function getInitialsAttribute(): string
     {
-        return $this->hasOne(AuthGroup::class, 'user_id');
+        return collect(explode(' ', $this->name))
+            ->filter()
+            ->take(2)
+            ->map(fn ($word) => strtoupper(substr($word, 0, 1)))
+            ->implode('');
     }
 
-   
+    public function getBranchNameAttribute(): ?string
+    {
+        return $this->branch?->name;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONS - RBAC
+    |--------------------------------------------------------------------------
+    */
+
     public function groups(): HasMany
     {
-        return $this->hasMany(AuthGroup::class, 'user_id');
+        return $this->hasMany(
+            \App\Auth\Models\AuthGroupUser::class,
+            'user_id'
+        );
     }
 
-
-
-
-    public function permissions()
+    public function permissions(): HasMany
     {
-        return $this->hasMany(AuthPermission::class, 'user_id');
-    }
-
-    public function branch()
-    {
-        return $this->belongsTo(Branch::class, 'branch_id');
-    }
-
-    public function leads()
-    {
-        return $this->hasMany(Lead::class, 'created_by');
-    }
-
-    public function wonLeads()
-    {
-        return $this->leads()->where('status', 'won');
-    }
-
-    public function todayLeads()
-    {
-        return $this->leads()->whereDate('created_at', today());
+        return $this->hasMany(
+            \App\Auth\Models\AuthPermissionUser::class,
+            'user_id'
+        );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | PASSWORD HELPERS
+    | RELATION - BRANCH
     |--------------------------------------------------------------------------
     */
-    public function mustChangePassword(): bool
-    {
-        return (bool) $this->force_password_change
-            && is_null($this->password_changed_at);
-    }
 
-    public function markPasswordAsChanged(): void
+    public function branch(): BelongsTo
     {
-        $this->force_password_change = false;
-        $this->password_changed_at = now();
-        $this->save();
+        return $this->belongsTo(
+            \App\Branch\Models\Branch::class,
+            'branch_id'
+        );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | GROUP SCOPES (SINGLE ONLY)
+    | HELPERS
     |--------------------------------------------------------------------------
     */
 
-    public function scopeInGroup(Builder $query, string $group): Builder
+    public function isInBranch(int $branchId): bool
     {
-        return $query->whereHas('group', function ($q) use ($group) {
-            $q->whereRaw('LOWER(`group`) = ?', [strtolower($group)]);
-        });
+        return (int) $this->branch_id === $branchId;
+    }
+
+    public function hasBranch(): bool
+    {
+        return !is_null($this->branch_id);
+    }
+
+    public function hasGroup(string $group): bool
+    {
+        return $this->relationLoaded('groups')
+            ? $this->groups->contains('group', $group)
+            : $this->groups()->where('group', $group)->exists();
     }
 }

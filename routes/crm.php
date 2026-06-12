@@ -1,9 +1,8 @@
 <?php
 
-
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\User\UserController;
+
 use App\Http\Controllers\CRM\LeadController;
 use App\Http\Controllers\CRM\LeadReminderController;
 use App\Http\Controllers\CRM\LeadTransactionController;
@@ -11,14 +10,12 @@ use App\Http\Controllers\CRM\CustomerController;
 use App\Http\Controllers\CRM\LeadTaskController;
 use App\Http\Controllers\CRM\ReportController;
 
-Route::middleware(['auth', 'group:admin,superadmin'])
+Route::middleware('rbac:group:admin|group:superadmin')
     ->prefix('crm')
     ->name('crm.')
-    ->group(function () {
+    ->group(function () { 
 
-
-
-         /*
+        /*
         |------------------------------------------
         | LEADS
         |------------------------------------------
@@ -28,7 +25,7 @@ Route::middleware(['auth', 'group:admin,superadmin'])
         Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])
             ->name('leads.status');
 
-                /*
+        /*
         |------------------------------------------
         | TASKS
         |------------------------------------------
@@ -37,49 +34,22 @@ Route::middleware(['auth', 'group:admin,superadmin'])
             ->name('tasks.')
             ->group(function () {
 
-                // LIST
-                Route::get('/', [LeadTaskController::class, 'index'])
-                    ->name('index');
+                Route::get('/', [LeadTaskController::class, 'index'])->name('index');
+                Route::get('/create', [LeadTaskController::class, 'create'])->name('create');
+                Route::post('/', [LeadTaskController::class, 'store'])->name('store');
 
-                // CREATE
-                Route::get('/create', [LeadTaskController::class, 'create'])
-                    ->name('create');
+                Route::get('/{task}', [LeadTaskController::class, 'show'])->name('show');
+                Route::get('/{task}/edit', [LeadTaskController::class, 'edit'])->name('edit');
+                Route::put('/{task}', [LeadTaskController::class, 'update'])->name('update');
 
-                Route::post('/', [LeadTaskController::class, 'store'])
-                    ->name('store');
+                Route::post('/{task}/start', [LeadTaskController::class, 'start'])->name('start');
+                Route::post('/{task}/complete', [LeadTaskController::class, 'complete'])->name('complete');
+                Route::post('/{task}/cancel', [LeadTaskController::class, 'cancel'])->name('cancel');
+                Route::post('/{task}/assign', [LeadTaskController::class, 'assign'])->name('assign');
+                Route::post('/{task}/reopen', [LeadTaskController::class, 'reopen'])->name('reopen');
 
-                // SHOW
-                Route::get('/{task}', [LeadTaskController::class, 'show'])
-                    ->name('show');
-
-                // EDIT
-                Route::get('/{task}/edit', [LeadTaskController::class, 'edit'])
-                    ->name('edit');
-
-                Route::put('/{task}', [LeadTaskController::class, 'update'])
-                    ->name('update');
-
-                // ACTIONS
-                Route::post('/{task}/start', [LeadTaskController::class, 'start'])
-                    ->name('start');
-
-                Route::post('/{task}/complete', [LeadTaskController::class, 'complete'])
-                    ->name('complete');
-
-                Route::post('/{task}/cancel', [LeadTaskController::class, 'cancel'])
-                    ->name('cancel');
-
-                Route::post('/{task}/assign', [LeadTaskController::class, 'assign'])
-                    ->name('assign');
-
-                Route::post('/{task}/reopen', [LeadTaskController::class, 'reopen'])
-                    ->name('reopen');
-
-                // DELETE
-                Route::delete('/{task}', [LeadTaskController::class, 'destroy'])
-                    ->name('destroy');
+                Route::delete('/{task}', [LeadTaskController::class, 'destroy'])->name('destroy');
             });
-        
 
         /*
         |------------------------------------------
@@ -90,14 +60,11 @@ Route::middleware(['auth', 'group:admin,superadmin'])
             ->name('reports.')
             ->group(function () {
 
-                Route::get('/users', [ReportController::class, 'users'])
-                    ->name('users');
+                Route::get('/users', [ReportController::class, 'users'])->name('users');
 
                 Route::get('/users/export', [ReportController::class, 'exportUserReport'])
                     ->name('users.export');
             });
-
-    
 
         /*
         |------------------------------------------

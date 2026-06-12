@@ -3,201 +3,102 @@
 namespace App\Auth\Services;
 
 use App\User\Models\User;
-use App\Auth\Services\AuthGroupService;
-use App\Auth\Services\AuthPermissionService;
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    public function __construct(
-        protected AuthGroupService $groupService,
-        protected AuthPermissionService $permissionService,
-    ) {}
+    /**
+     * Attempt login using credentials.
+     *
+     * @throws ValidationException
+     */
+    public function attempt(
+        string $email,
+        string $password,
+        string $ip,
+        bool $remember = false
+    ): bool {
 
-    /*
-    |---------------------------------------------------
-    | AUTH CORE
-    |---------------------------------------------------
-    */
+        $throttleKey = Str::transliterate(
+            Str::lower($email).'|'.$ip
+        );
 
-    public function user(): ?User
-    {
-        return auth()->user();
+        if (RateLimiter::tooManyAttempts(
+            $throttleKey,
+            5
+        )) {
+
+            event(new Lockout(request()));
+
+            $seconds = RateLimiter::availableIn(
+                $throttleKey
+            );
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => ceil($seconds / 60),
+                ]),
+            ]);
+        }
+
+        if (! Auth::attempt([
+            'email' => $email,
+            'password' => $password,
+        ], $remember)) {
+
+            RateLimiter::hit($throttleKey);
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
+
+        RateLimiter::clear($throttleKey);
+
+        return true;
     }
 
-    public function check(): bool
+    /**
+     * Register new user.
+     */
+    public function register(array $data): User
     {
-        return auth()->check();
+        $user = DB::transaction(function () use ($data) {
+            return User::create([
+                'name'     => $data['name'],
+                'email'    => $data['email'],
+                'password' => Hash::make($data['password']),
+            ]);
+        });
+
+        event(new Registered($user));
+
+        return $user;
     }
 
+    /**
+     * Login a specific user instance.
+     */
+    public function login(
+        User $user,
+        bool $remember = false
+    ): void {
+        Auth::login($user, $remember);
+    }
+
+    /**
+     * Logout current user.
+     */
     public function logout(): void
     {
         Auth::logout();
-    }
-
-    /*
-    |---------------------------------------------------
-    | GROUPS
-    |---------------------------------------------------
-    */
-
-    protected function groups(?User $user = null): array
-    {
-        $user ??= $this->user();
-
-        if (! $user) {
-            return [];
-        }
-
-        return array_map(
-            fn ($g) => strtolower(trim($g)),
-            $this->groupService->getGroups($user->id)
-        );
-    }
-
-    /*
-    |---------------------------------------------------
-    | PERMISSIONS
-    |---------------------------------------------------
-    */
-
-    protected function permissions(?User $user = null): array
-    {
-        $user ??= $this->user();
-
-        if (! $user) {
-            return [];
-        }
-
-        return array_map(
-            fn ($p) => strtolower(trim($p)),
-            $this->permissionService->getPermissions($user->id)
-        );
-    }
-
-    /*
-    |---------------------------------------------------
-    | GROUP CHECK
-    |---------------------------------------------------
-    */
-
-    public function inGroup(string ...$groups): bool
-    {
-        $groups = array_map(
-            fn ($g) => strtolower(trim($g)),
-            $groups
-        );
-
-        return ! empty(array_intersect($groups, $this->groups()));
-    }
-
-    /*
-    |---------------------------------------------------
-    | PERMISSION CHECK (SINGLE)
-    |---------------------------------------------------
-    */
-
-    public function hasPermission(string $permission): bool
-    {
-        return in_array(
-            strtolower(trim($permission)),
-            $this->permissions(),
-            true
-        );
-    }
-
-    /*
-    |---------------------------------------------------
-    | RBAC CORE CHECK
-    |---------------------------------------------------
-    */
-
-    public function can(string ...$permissions): bool
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        $permissions = array_map(
-            fn ($p) => strtolower(trim($p)),
-            $permissions
-        );
-
-        $userGroups = $this->groups($user);
-        $userPermissions = $this->permissions($user);
-
-        /*
-        | SUPERADMIN BYPASS
-        */
-        if (in_array('superadmin', $userGroups, true)) {
-            return true;
-        }
-
-        /*
-        | DIRECT PERMISSION CHECK
-        */
-        if (! empty(array_intersect($permissions, $userPermissions))) {
-            return true;
-        }
-
-        /*
-        | MATRIX RULE CHECK
-        */
-        $matrix = config('auth_groups.matrix', []);
-
-        foreach ($userGroups as $group) {
-            foreach ($matrix[$group] ?? [] as $rule) {
-                foreach ($permissions as $permission) {
-                    if ($this->matches($permission, $rule)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /*
-    |---------------------------------------------------
-    | WILDCARD MATCHER
-    |---------------------------------------------------
-    */
-
-    protected function matches(string $permission, string $rule): bool
-    {
-        $permission = strtolower(trim($permission));
-        $rule = strtolower(trim($rule));
-
-        if ($rule === '*') {
-            return true;
-        }
-
-        if (str_contains($rule, '*')) {
-            $pattern = str_replace('\*', '.*', preg_quote($rule, '/'));
-            return (bool) preg_match("/^{$pattern}$/", $permission);
-        }
-
-        return $permission === $rule;
-    }
-
-    /*
-    |---------------------------------------------------
-    | LOGIN REDIRECT FLOW
-    |---------------------------------------------------
-    */
-
-    public function redirectAfterLogin(): string
-    {
-        if (! $this->check()) {
-            return route('login');
-        }
-
-        return match (true) {
-            $this->inGroup('superadmin') => route('users.index'),
-            default => route('dashboard'),
-        };
     }
 }

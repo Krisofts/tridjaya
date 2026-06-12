@@ -3,6 +3,7 @@
 namespace App\Branch\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\User\Models\User;
 
 class Branch extends Model
@@ -30,7 +31,7 @@ class Branch extends Model
 
     /*
     |---------------------------------------------------
-    | CASTING
+    | CASTS
     |---------------------------------------------------
     */
     protected $casts = [
@@ -42,7 +43,7 @@ class Branch extends Model
     | RELATION: USERS
     |---------------------------------------------------
     */
-    public function users()
+    public function users(): HasMany
     {
         return $this->hasMany(User::class, 'branch_id');
     }
@@ -52,9 +53,29 @@ class Branch extends Model
     | SCOPES
     |---------------------------------------------------
     */
-
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeInactive($query)
+    {
+        return $query->where('is_active', false);
+    }
+
+    /*
+    |---------------------------------------------------
+    | HELPERS (UI / DOMAIN LIGHT)
+    |---------------------------------------------------
+    */
+
+    public function getIsActiveLabelAttribute(): string
+    {
+        return $this->is_active ? 'Active' : 'Inactive';
+    }
+
+    public function hasUsers(): bool
+    {
+        return $this->users()->exists();
     }
 }

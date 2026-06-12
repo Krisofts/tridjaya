@@ -11,6 +11,11 @@ class UserFilter
         protected Request $request
     ) {}
 
+    /*
+    |--------------------------------------------------------------------------
+    | APPLY ALL FILTERS
+    |--------------------------------------------------------------------------
+    */
     public function apply(Builder $query): Builder
     {
         return $query
@@ -21,6 +26,7 @@ class UserFilter
                     $this->request->string('search')->value()
                 )
             )
+
             ->when(
                 $this->request->filled('group'),
                 fn (Builder $query) => $this->group(
@@ -28,6 +34,15 @@ class UserFilter
                     $this->request->string('group')->value()
                 )
             )
+
+            ->when(
+                $this->request->filled('branch_id'),
+                fn (Builder $query) => $query->where(
+                    'branch_id',
+                    $this->request->integer('branch_id')
+                )
+            )
+
             ->when(
                 $this->request->filled('sort'),
                 fn (Builder $query) => $this->sort(
@@ -38,33 +53,30 @@ class UserFilter
     }
 
     /*
-    |---------------------------------------------------
-    | SEARCH
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | SEARCH FILTER
+    |--------------------------------------------------------------------------
     */
-    protected function search(
-        Builder $query,
-        string $keyword
-    ): Builder {
-        return $query->where(
-            fn (Builder $query) => $query
-                ->where('name', 'like', "%{$keyword}%")
-                ->orWhere('email', 'like', "%{$keyword}%")
-        );
+    protected function search(Builder $query, string $keyword): Builder
+    {
+        $keyword = trim($keyword);
+
+        return $query->where(function (Builder $q) use ($keyword) {
+            $q->where('name', 'like', "%{$keyword}%")
+              ->orWhere('email', 'like', "%{$keyword}%");
+        });
     }
 
     /*
-    |---------------------------------------------------
-    | FILTER GROUP
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | GROUP FILTER
+    |--------------------------------------------------------------------------
     */
-    protected function group(
-        Builder $query,
-        string $group
-    ): Builder {
+    protected function group(Builder $query, string $group): Builder
+    {
         return $query->whereHas(
             'groups',
-            fn (Builder $query) => $query->where(
+            fn (Builder $q) => $q->where(
                 'group',
                 strtolower(trim($group))
             )
@@ -72,24 +84,23 @@ class UserFilter
     }
 
     /*
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     | SORTING
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
     */
-    protected function sort(
-        Builder $query,
-        string $sort
-    ): Builder {
+    protected function sort(Builder $query, string $sort): Builder
+    {
         return match ($sort) {
-            'name_asc'  => $query->orderBy('name'),
-            'name_desc' => $query->orderByDesc('name'),
+
+            'name_asc'   => $query->orderBy('name'),
+            'name_desc'  => $query->orderByDesc('name'),
 
             'email_asc'  => $query->orderBy('email'),
             'email_desc' => $query->orderByDesc('email'),
 
-            'oldest' => $query->oldest(),
+            'oldest'     => $query->oldest(),
 
-            default => $query->latest(),
+            default      => $query->latest(),
         };
     }
 }

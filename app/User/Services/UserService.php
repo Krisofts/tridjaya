@@ -4,259 +4,176 @@ namespace App\User\Services;
 
 use App\User\Models\User;
 use App\User\Filters\UserFilter;
-use App\Auth\Services\AuthGroupService;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
+use App\Auth\Services\AuthorizationService;
+use App\Branch\Services\BranchService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
     public function __construct(
-        protected AuthGroupService $authGroupService
+        protected AuthorizationService $authz,
+        protected BranchService $branchService
     ) {}
 
     /*
-    |---------------------------------------------------
-    | BASE QUERY
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | GET USERS (FILTER + PAGINATION)
+    |--------------------------------------------------------------------------
     */
-    public function query(): Builder
+    public function getAll(UserFilter $filter): LengthAwarePaginator
     {
-        return User::query()
-            ->with([
-                'groups',
-                'permissions',
-                'branch', // 👈 ADD
-            ]);
-    }
-
-    /*
-    |---------------------------------------------------
-    | FIND USER BY ID
-    |---------------------------------------------------
-    */
-    public function findById(int $id): ?User
-    {
-        return $this->query()->find($id);
-    }
-
-    /*
-    |---------------------------------------------------
-    | FIND USER BY EMAIL
-    |---------------------------------------------------
-    */
-    public function findByEmail(string $email): ?User
-    {
-        return $this->query()
-            ->where('email', $email)
-            ->first();
-    }
-
-    /*
-    |---------------------------------------------------
-    | CREATE USER
-    |---------------------------------------------------
-    */
-    public function create(array $data): User
-    {
-        $user = User::create([
-            'name'       => $data['name'],
-            'email'      => $data['email'],
-            'password'   => Hash::make($data['password']),
-
-            // 👇 BRANCH SUPPORT
-            'branch_id'  => $data['branch_id'] ?? null,
-
-            'force_password_change' => true,
-            'password_changed_at'   => null,
-        ]);
-
-        $this->authGroupService
-            ->addToDefaultGroup($user->id);
-
-        return $user->fresh([
-            'groups',
-            'permissions',
-            'branch', // 👈 ADD
-        ]);
-    }
-
-    /*
-    |---------------------------------------------------
-    | UPDATE USER
-    |---------------------------------------------------
-    */
-    public function update(int $id, array $data): User
-    {
-        $user = User::findOrFail($id);
-
-        $user->fill([
-            'name'       => $data['name'] ?? $user->name,
-            'email'      => $data['email'] ?? $user->email,
-
-            // 👇 BRANCH SUPPORT
-            'branch_id'  => $data['branch_id'] ?? $user->branch_id,
-        ]);
-
-        if (! empty($data['password'])) {
-            $user->password = Hash::make($data['password']);
-            $user->force_password_change = false;
-            $user->password_changed_at = now();
-        }
-
-        $user->save();
-
-        return $user->fresh([
-            'groups',
-            'permissions',
-            'branch', // 👈 ADD
-        ]);
-    }
-
-    /*
-    |---------------------------------------------------
-    | DELETE USER
-    |---------------------------------------------------
-    */
-    public function delete(int $id, bool $force = false): bool
-    {
-        $user = User::withTrashed()->findOrFail($id);
-
-        return $force
-            ? (bool) $user->forceDelete()
-            : (bool) $user->delete();
-    }
-
-    /*
-    |---------------------------------------------------
-    | RESTORE USER
-    |---------------------------------------------------
-    */
-    public function restore(int $id): User
-    {
-        $user = User::onlyTrashed()->findOrFail($id);
-        $user->restore();
-
-        return $user;
-    }
-
-    /*
-    |---------------------------------------------------
-    | PAGINATION
-    |---------------------------------------------------
-    */
-    public function paginate(UserFilter $filter, int $perPage = 15): LengthAwarePaginator
-    {
-        return $filter
-            ->apply($this->query())
-            ->paginate($perPage)
+        return $filter->apply(
+                User::query()->with([
+                    'branch:id,name',
+                    'groups:user_id,group'
+                ])
+            )
+            ->latest('id')
+            ->paginate(10)
             ->withQueryString();
     }
 
     /*
-    |---------------------------------------------------
-    | ALL USERS
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | GET BRANCH OPTIONS (FOR FORM)
+    |--------------------------------------------------------------------------
     */
-    public function all()
+    public function getBranchOptions(): array
     {
-        return $this->query()->latest()->get();
+        return $this->branchService->getOptions();
     }
 
     /*
-    |---------------------------------------------------
-    | TRASHED USERS
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | GET GROUP OPTIONS (FROM CONFIG)
+    |--------------------------------------------------------------------------
     */
-    public function trashed(int $perPage = 15): LengthAwarePaginator
+    public function getGroupOptions(): array
     {
-        return User::onlyTrashed()
-            ->with(['groups', 'permissions', 'branch'])
-            ->latest()
-            ->paginate($perPage);
+        return cache()->remember('auth.groups.options', 3600, function () {
+
+            $groups = config('auth_groups.groups');
+
+            $options = [];
+
+            foreach ($groups as $key => $group) {
+                $options[$key] = $group['title'];
+            }
+
+            return $options;
+        });
     }
 
     /*
-    |---------------------------------------------------
-    | COUNT
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | CREATE USER
+    |--------------------------------------------------------------------------
     */
-    public function count(): int
+    public function create(array $data): User
     {
-        return User::count();
+        return DB::transaction(function () use ($data) {
+
+            $user = User::create([
+                'name'      => $data['name'],
+                'email'     => $data['email'],
+                'branch_id' => $data['branch_id'] ?? null,
+                'password'  => Hash::make($data['password']),
+            ]);
+
+            $this->syncGroups($user, $data['groups'] ?? []);
+
+            return $user;
+        });
     }
 
     /*
-    |---------------------------------------------------
-    | EMAIL CHECK
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | UPDATE USER
+    |--------------------------------------------------------------------------
     */
-    public function existsByEmail(string $email, ?int $exceptUserId = null): bool
+    public function update(User $user, array $data): User
     {
-        return User::query()
-            ->when(
-                $exceptUserId,
-                fn ($query) => $query->where('id', '!=', $exceptUserId)
-            )
-            ->where('email', $email)
-            ->exists();
+        return DB::transaction(function () use ($user, $data) {
+
+            $payload = $this->buildUpdatePayload($data);
+
+            if (!empty($payload)) {
+                $user->update($payload);
+            }
+
+            if (array_key_exists('groups', $data)) {
+                $this->syncGroups($user, $data['groups'] ?? []);
+            }
+
+            return $user->refresh();
+        });
     }
 
     /*
-    |---------------------------------------------------
-    | CHANGE PASSWORD
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | DELETE USER
+    |--------------------------------------------------------------------------
     */
-    public function changePassword(int $userId, string $password): User
+    public function delete(User $user): void
     {
-        $user = User::findOrFail($userId);
+        DB::transaction(function () use ($user) {
 
-        $user->update([
-            'password'              => Hash::make($password),
-            'force_password_change' => false,
-            'password_changed_at'   => now(),
-        ]);
+            $user->groups()->delete();
+            $user->delete();
 
-        return $user;
+            $this->authz->clearCache($user);
+        });
     }
 
     /*
-    |---------------------------------------------------
-    | FORCE RESET PASSWORD
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | ASSIGN GROUPS (SHORTCUT)
+    |--------------------------------------------------------------------------
     */
-    public function forcePasswordReset(int $userId): User
+    public function assignGroups(User $user, array $groups): void
     {
-        $user = User::findOrFail($userId);
-
-        $user->update([
-            'force_password_change' => true,
-        ]);
-
-        return $user;
+        $this->syncGroups($user, $groups);
     }
 
     /*
-    |---------------------------------------------------
-    | USERS BY BRANCH (OPTIONAL BUT USEFUL)
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | BUILD UPDATE PAYLOAD (SAFE FIELD CONTROL)
+    |--------------------------------------------------------------------------
     */
-    public function byBranch(int $branchId, int $perPage = 15): LengthAwarePaginator
+    private function buildUpdatePayload(array $data): array
     {
-        return $this->query()
-            ->where('branch_id', $branchId)
-            ->paginate($perPage);
+        $payload = [];
+
+        foreach (['name', 'email', 'branch_id'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $payload[$field] = $data[$field];
+            }
+        }
+
+        if (!empty($data['password'])) {
+            $payload['password'] = Hash::make($data['password']);
+        }
+
+        return $payload;
     }
 
     /*
-    |---------------------------------------------------
-    | CURRENT BRANCH USERS
-    |---------------------------------------------------
+    |--------------------------------------------------------------------------
+    | GROUP SYNC STRATEGY
+    |--------------------------------------------------------------------------
     */
-    public function currentBranchUsers(int $perPage = 15): LengthAwarePaginator
+    private function syncGroups(User $user, array $groups): void
     {
-        return $this->query()
-            ->where('branch_id', auth()->user()->branch_id)
-            ->paginate($perPage);
+        if (!empty($groups)) {
+            $this->authz->syncGroups($user, $groups);
+            return;
+        }
+
+        $this->authz->assignGroup(
+            $user,
+            config('auth_groups.defaultGroup', 'user')
+        );
     }
 }
