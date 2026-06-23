@@ -31,59 +31,6 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
-Route::middleware(['auth'])
-    ->prefix('crm')
-    ->name('crm.')
-    ->group(function () {
-
-
-       Route::patch('/tasks/{task}/complete', [TaskController::class, 'complete'])
-        ->name('tasks.complete');
-
-        /*
-        |--------------------------------------------------------------------------
-        | CRM LEADS
-        |--------------------------------------------------------------------------
-        */
-
-        Route::get('/leads', [LeadController::class, 'index'])
-            ->name('leads.index');
-
-        Route::get('/leads/create', [LeadController::class, 'create'])
-            ->name('leads.create');
-
-        Route::post('/leads', [LeadController::class, 'store'])
-            ->name('leads.store');
-
-        Route::get('/leads/{lead}', [LeadController::class, 'show'])
-            ->name('leads.show');
-
-        Route::get('/leads/{lead}/edit', [LeadController::class, 'edit'])
-            ->name('leads.edit');
-
-        Route::put('/leads/{lead}', [LeadController::class, 'update'])
-            ->name('leads.update');
-
-        Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])
-            ->name('leads.destroy');
-
-        Route::post('/leads/{lead}/restore', [LeadController::class, 'restore'])
-            ->name('leads.restore');
-
-        Route::delete('/leads/{lead}/force-delete', [LeadController::class, 'forceDelete'])
-            ->name('leads.forceDelete');
-
-        /*
-        |--------------------------------------------------------------------------
-        | LEAD ACTIVITIES
-        |--------------------------------------------------------------------------
-        */
-
-        Route::post(
-            '/leads/{lead}/activities',
-            [LeadController::class, 'storeActivity']
-        )->name('leads.activities.store');
-    });
 
 /*
 |--------------------------------------------------------------------------
@@ -145,4 +92,5 @@ Route::middleware(['auth'])->prefix('users')->name('users.')->group(function () 
 |--------------------------------------------------------------------------
 */
 
+require __DIR__.'/crm.php';
 require __DIR__.'/auth.php';

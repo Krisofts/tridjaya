@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'region' => [
+        'base_url' => env('REGION_API_URL', 'https://wilayah.id/api'),
+    ],
+
 ];

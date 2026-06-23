@@ -10,4 +10,17 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
+
+  server: {
+    watch: {
+      usePolling: true,
+      interval: 300,
+      ignored: [
+        '**/vendor/**',
+        '**/node_modules/**',
+        '**/storage/**',
+        '**/bootstrap/cache/**',
+      ],
+    },
+  },
 })

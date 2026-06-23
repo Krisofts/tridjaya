@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? 'Dashboard' }} | TailAdmin - Laravel Tailwind CSS Admin Dashboard Template</title>
+    <title>{{ $title ?? 'Dashboard' }} | Tridjaya</title>
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -107,6 +107,9 @@
     };
     window.addEventListener('resize', checkMobile);">
 
+
+
+
     {{-- preloader --}}
     <x-common.preloader/>
     {{-- preloader end --}}
@@ -126,6 +129,25 @@
             <!-- app header end -->
             <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
                 @yield('content')
+                
+                
+                <div class="fixed top-5 right-5 z-[9999] space-y-3">
+    @if (session('success'))
+        <x-ui.notification-message
+            type="success"
+            :message="session('success')"
+        />
+    @endif
+
+    @if (session('error'))
+        <x-ui.notification-message
+            type="error"
+            :message="session('error')"
+        />
+    @endif
+</div>
+                
+                
             </div>
         </div>
 

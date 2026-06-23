@@ -1,44 +1,33 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="p-6 max-w-4xl mx-auto">
 
-    {{-- HEADER --}}
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">
-            User Detail
-        </h1>
+<x-common.page-breadcrumb
+    pageTitle="User Detail"
+    :breadcrumbs="[
+        ['label' => 'Home', 'url' => route('dashboard')],
+        ['label' => 'Users', 'url' => route('users.index')],
+        ['label' => 'Detail'],
+    ]"
+/>
 
-        <div class="space-x-2">
-            <a href="{{ route('users.edit', $user) }}"
-               class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
-                Edit
-            </a>
+<div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 
-            <a href="{{ route('users.index') }}"
-               class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-                Back
-            </a>
-        </div>
-    </div>
+    {{-- MAIN --}}
+    <div class="xl:col-span-2 space-y-6">
 
-    {{-- USER INFO --}}
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        {{-- USER INFO (SINGLE CARD) --}}
+        <x-common.component-card title="User Information">
 
-        <div class="grid grid-cols-2 gap-4">
-
-            <div>
-                <p class="text-sm text-gray-500">Name</p>
-                <p class="font-semibold">{{ $user->name }}</p>
-            </div>
-
-            <div>
-                <p class="text-sm text-gray-500">Email</p>
-                <p class="font-semibold">{{ $user->email }}</p>
-            </div>
-
-            <div>
-                <p class="text-sm text-gray-500">Status</p>
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        {{ $user->name }}
+                    </h2>
+                    <p class="text-sm text-gray-500">
+                        {{ $user->email }}
+                    </p>
+                </div>
 
                 @if ($user->deleted_at)
                     <span class="px-2 py-1 text-xs bg-red-100 text-red-600 rounded">
@@ -51,62 +40,97 @@
                 @endif
             </div>
 
-            <div>
-                <p class="text-sm text-gray-500">Created At</p>
-                <p class="font-semibold">
-                    {{ $user->created_at?->format('d M Y H:i') }}
-                </p>
-            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm">
 
-        </div>
+                <div>
+                    <p class="text-gray-500">Created At</p>
+                    <p class="font-medium">
+                        {{ $user->created_at?->format('d M Y H:i') }}
+                    </p>
+                </div>
 
-    </div>
-
-    {{-- GROUPS --}}
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-
-        <h2 class="font-semibold mb-3">Groups</h2>
-
-        @if (count($groups ?? []) > 0)
-
-            <div class="flex flex-wrap gap-2">
-
-                @foreach ($groups as $group)
-                    <span class="px-3 py-1 text-sm bg-gray-200 rounded-full">
-                        {{ $group }}
-                    </span>
-                @endforeach
+                <div>
+                    <p class="text-gray-500">Updated At</p>
+                    <p class="font-medium">
+                        {{ $user->updated_at?->format('d M Y H:i') }}
+                    </p>
+                </div>
 
             </div>
 
-        @else
-            <p class="text-gray-500 text-sm">No groups assigned</p>
-        @endif
+        </x-common.component-card>
 
-    </div>
+        {{-- GROUPS + PERMISSIONS (MERGED) --}}
+        <x-common.component-card title="Access Control">
 
-    {{-- PERMISSIONS --}}
-    <div class="bg-white shadow rounded-lg p-6">
+            <div class="space-y-4">
 
-        <h2 class="font-semibold mb-3">Permissions</h2>
+                {{-- Groups --}}
+                <div>
+                    <p class="text-sm text-gray-500 mb-2">Groups</p>
 
-        @if (count($permissions ?? []) > 0)
-
-            <div class="grid grid-cols-2 gap-2">
-
-                @foreach ($permissions as $permission)
-                    <div class="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded">
-                        {{ $permission }}
+                    <div class="flex flex-wrap gap-2">
+                        @forelse ($groups as $group)
+                            <span class="px-3 py-1 text-sm bg-gray-200 rounded-full">
+                                {{ $group }}
+                            </span>
+                        @empty
+                            <p class="text-sm text-gray-500">No groups assigned</p>
+                        @endforelse
                     </div>
-                @endforeach
+                </div>
+
+                {{-- Permissions --}}
+                <div>
+                    <p class="text-sm text-gray-500 mb-2">Permissions</p>
+
+                    <div class="flex flex-wrap gap-2">
+                        @forelse ($permissions as $permission)
+                            <span class="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded">
+                                {{ $permission }}
+                            </span>
+                        @empty
+                            <p class="text-sm text-gray-500">No permissions assigned</p>
+                        @endforelse
+                    </div>
+                </div>
 
             </div>
 
-        @else
-            <p class="text-gray-500 text-sm">No permissions assigned</p>
-        @endif
+        </x-common.component-card>
+
+    </div>
+
+    {{-- SIDEBAR (MINIMAL) --}}
+    <div class="space-y-6">
+
+        <x-common.component-card title="Summary">
+
+            <div class="space-y-3 text-sm">
+
+                <div>
+                    <p class="text-gray-500">Name</p>
+                    <p class="font-medium">{{ $user->name }}</p>
+                </div>
+
+                <div>
+                    <p class="text-gray-500">Email</p>
+                    <p class="font-medium">{{ $user->email }}</p>
+                </div>
+
+                <div>
+                    <p class="text-gray-500">Status</p>
+                    <p class="font-medium">
+                        {{ $user->deleted_at ? 'Deleted' : 'Active' }}
+                    </p>
+                </div>
+
+            </div>
+
+        </x-common.component-card>
 
     </div>
 
 </div>
+
 @endsection

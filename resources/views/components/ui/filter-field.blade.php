@@ -6,6 +6,7 @@
     'options' => [],
     'optionLabel' => 'label',
     'optionValue' => 'value',
+    'selected' => null,
 ])
 
 <div class="mb-5 w-full">
@@ -47,8 +48,16 @@
 
                 {{-- options --}}
                 @foreach($options as $option)
-                    <option value="{{ $option[$optionValue] }}">
-                        {{ $option[$optionLabel] }}
+                    @php
+                        $value = $option[$optionValue] ?? null;
+                        $labelText = $option[$optionLabel] ?? null;
+                    @endphp
+
+                    <option
+                        value="{{ $value }}"
+                        @selected((string) $selected === (string) $value)
+                    >
+                        {{ $labelText }}
                     </option>
                 @endforeach
 

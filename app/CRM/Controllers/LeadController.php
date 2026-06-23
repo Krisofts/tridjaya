@@ -4,42 +4,44 @@ namespace App\CRM\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+
 use App\CRM\Requests\StoreLeadRequest;
-use App\CRM\Models\CrmLead;
-use App\CRM\Requests\StoreActivityRequest;
 use App\CRM\Requests\UpdateLeadRequest;
+
+use App\CRM\Models\CrmLead;
 use App\CRM\Services\LeadService;
-use App\CRM\Services\ActivityService;
-use App\CRM\Services\TaskService;
 
 class LeadController extends Controller
 {
     public function __construct(
-        protected LeadService $leadService,
-        protected ActivityService $activityService,
-        protected TaskService $taskService
+        protected LeadService $leadService
     ) {}
 
-    /* -------------------------------------------------
-     | INDEX
-     |-------------------------------------------------*/
+    /*
+    |--------------------------------------------------------------------------
+    | INDEX
+    |--------------------------------------------------------------------------
+    */
     public function index(Request $request)
-    {
-        $leads = $this->leadService->getPaginated(
-            search: $request->string('search')->toString(),
-            sourceId: $request->integer('source_id') ?: null,
-            pipelineId: $request->integer('pipeline_id') ?: null,
-            stageId: $request->integer('stage_id') ?: null,
-        );
+{
+    $leads = $this->leadService->getPaginated(
+        search: $request->string('search')->toString(),
+        sourceId: $request->integer('source_id') ?: null,
+        pipelineId: $request->integer('pipeline_id') ?: null,
+        temperature: $request->string('temperature')->toString() ?: null,
+        assignedTo: $request->integer('assigned_to') ?: null, // 👤 ADD THIS
+    );
 
-        return view('crm.leads.index', array_merge([
-            'leads' => $leads,
-        ], $this->leadService->getFilterData()));
-    }
+    return view('crm.leads.index', array_merge([
+        'leads' => $leads,
+    ], $this->leadService->getFilterData()));
+}
 
-    /* -------------------------------------------------
-     | CREATE
-     |-------------------------------------------------*/
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE
+    |--------------------------------------------------------------------------
+    */
     public function create()
     {
         return view(
@@ -48,44 +50,28 @@ class LeadController extends Controller
         );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | STORE
+    |--------------------------------------------------------------------------
+    */
     public function store(StoreLeadRequest $request)
-{
-    $validated = $request->validated();
-    $validated['created_by'] = auth()->id();
+    {
+        $data = $request->validated();
+        $data['created_by'] = auth()->id();
 
-    $lead = $this->leadService->create($validated);
+        $this->leadService->create($data);
 
-    return redirect()
-        ->route('crm.leads.index')
-        ->with('success', 'Lead created successfully.');
-}
+        return redirect()
+            ->route('crm.leads.index')
+            ->with('success', 'Lead created successfully.');
+    }
 
-    /* -------------------------------------------------
-     | SHOW
-     |-------------------------------------------------*/
-    public function show(CrmLead $lead)
-{
-    $lead = $this->leadService->find($lead->id);
-
-    $activities = $this->activityService->getByLead($lead->id);
-
-    $tasks = $this->taskService->getByLead($lead->id);
-
-    $stages = $lead->pipeline
-        ? $lead->pipeline->stages()->orderBy('sort_order')->get()
-        : collect();
-
-    return view('crm.leads.show', compact(
-        'lead',
-        'activities',
-        'tasks',
-        'stages'
-    ));
-}
-
-    /* -------------------------------------------------
-     | EDIT
-     |-------------------------------------------------*/
+    /*
+    |--------------------------------------------------------------------------
+    | EDIT
+    |--------------------------------------------------------------------------
+    */
     public function edit(CrmLead $lead)
     {
         return view(
@@ -94,68 +80,25 @@ class LeadController extends Controller
         );
     }
 
-    /* -------------------------------------------------
-     | UPDATE
-     |-------------------------------------------------*/
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE
+    |--------------------------------------------------------------------------
+    */
     public function update(UpdateLeadRequest $request, CrmLead $lead)
     {
         $this->leadService->update($lead, $request->validated());
 
         return redirect()
-            ->route('crm.leads.show', $lead)
+            ->route('crm.leads.index')
             ->with('success', 'Lead updated successfully.');
     }
 
-    /* -------------------------------------------------
-     | CHANGE STAGE
-     |-------------------------------------------------*/
-    public function changeStage(Request $request, CrmLead $lead)
-    {
-        $validated = $request->validate([
-            'stage_id' => ['required', 'exists:crm_pipeline_stages,id'],
-        ]);
-
-        $oldStage = $lead->stage?->name;
-
-        $updatedLead = $this->leadService->changeStage(
-            $lead,
-            $validated['stage_id']
-        );
-
-        $newStage = $updatedLead->stage?->name;
-
-        $this->activityService->create([
-            'lead_id' => $lead->id,
-            'user_id' => auth()->id(),
-            'type' => 'stage_changed',
-            'title' => 'Stage Changed',
-            'description' => "{$oldStage} → {$newStage}",
-        ]);
-
-        return back()->with('success', 'Lead stage updated successfully.');
-    }
-
-    /* -------------------------------------------------
-     | STORE ACTIVITY
-     |-------------------------------------------------*/
-    public function storeActivity(StoreActivityRequest $request, CrmLead $lead)
-    {
-        $validated = $request->validated();
-
-        $this->activityService->create([
-            'lead_id' => $lead->id,
-            'user_id' => auth()->id(),
-            'type' => $validated['type'],
-            'title' => $validated['title'] ?? null,
-            'description' => $validated['description'] ?? null,
-        ]);
-
-        return back()->with('success', 'Activity created successfully.');
-    }
-
-    /* -------------------------------------------------
-     | DELETE
-     |-------------------------------------------------*/
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE
+    |--------------------------------------------------------------------------
+    */
     public function destroy(CrmLead $lead)
     {
         $this->leadService->delete($lead);

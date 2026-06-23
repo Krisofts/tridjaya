@@ -16,7 +16,6 @@ class InputWithLabel extends Component
     public bool $required;
     public bool $readonly;
     public ?string $hint;
-    public ?string $error;
 
     public function __construct(
         string $name,
@@ -27,17 +26,15 @@ class InputWithLabel extends Component
         bool $required = false,
         bool $readonly = false,
         ?string $hint = null,
-        ?string $error = null,
     ) {
         $this->name = $name;
         $this->label = $label;
         $this->type = $type;
-        $this->value = old($name, $value);
+        $this->value = $value; // jangan old() di sini
         $this->placeholder = $placeholder;
         $this->required = $required;
         $this->readonly = $readonly;
         $this->hint = $hint;
-        $this->error = $error;
     }
 
     public function render(): View|Closure|string

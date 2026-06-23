@@ -23,23 +23,27 @@
         <select
             id="{{ $name }}"
             name="{{ $multiple ? $name . '[]' : $name }}"
+
+            {{-- ✅ ALPINE SUPPORT --}}
+            {{ $attributes->merge([
+                'x-model' => $attributes->get('x-model'),
+            ]) }}
+
             @required($required)
             @disabled($disabled)
             @if($multiple) multiple @endif
+
             @change="isOptionSelected = true"
-            {{ $attributes->merge([
-                'class' =>
-                    'dark:bg-dark-900 shadow-theme-xs h-11 w-full appearance-none rounded-lg bg-transparent px-4 py-2.5 pr-11 text-sm focus:ring-3 focus:outline-hidden
-                    ' . ($hasError
-                        ? 'border border-error-500 focus:border-error-500 focus:ring-error-500/10'
-                        : 'border border-gray-300 text-gray-800 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800')
-            ]) }}
+
+            class="dark:bg-dark-900 shadow-theme-xs h-11 w-full appearance-none rounded-lg bg-transparent px-4 py-2.5 pr-11 text-sm focus:ring-3 focus:outline-hidden
+            {{ $hasError
+                ? 'border border-error-500 focus:border-error-500 focus:ring-error-500/10'
+                : 'border border-gray-300 text-gray-800 focus:border-brand-300 focus:ring-brand-500/10 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-800'
+            }}"
             :class="isOptionSelected && 'text-gray-800 dark:text-white/90'"
         >
             @unless($multiple)
-                <option value="">
-                    {{ $placeholder }}
-                </option>
+                <option value="">{{ $placeholder }}</option>
             @endunless
 
             @foreach ($options as $value => $text)

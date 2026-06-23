@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,7 +19,15 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BranchSeeder::class,
             CrmLeadSourceSeeder::class,
+            CrmPipelineSeeder::class,
             CrmPipelineStageSeeder::class,
+
+            // 👉 ADD RESULT FLOW SYSTEM
+            CrmResultSeeder::class,
+            CrmResultStageMappingSeeder::class,
+
+            SuperAdminSeeder::class,
+            CrmPipelineStageTaskSeeder::class,
         ]);
     }
 }

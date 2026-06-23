@@ -12,37 +12,44 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('crm_tasks', function (Blueprint $table) {
-            $table->id();
+    $table->id();
 
-            // relation
-            $table->foreignId('lead_id')
-                ->constrained('crm_leads')
-                ->cascadeOnDelete();
+    $table->foreignId('lead_id')
+        ->constrained('crm_leads')
+        ->cascadeOnDelete();
 
-            $table->foreignId('user_id')
-                ->nullable()
-                ->constrained('users')
-                ->nullOnDelete();
+    $table->foreignId('user_id')
+        ->nullable()
+        ->constrained('users')
+        ->nullOnDelete();
 
-            // content
-            $table->string('title');
-            $table->text('description')->nullable();
+    $table->foreignId('created_by')
+        ->nullable()
+        ->constrained('users')
+        ->nullOnDelete();
 
-            // flexible fields (NO ENUM)
-            $table->string('status')->default('pending'); 
-            $table->string('priority')->default('medium');
+    $table->string('title');
+    $table->text('description')->nullable();
 
-            // scheduling
-            $table->timestamp('due_at')->nullable();
-            $table->timestamp('completed_at')->nullable();
+    $table->string('type')->default('follow_up');
 
-            $table->timestamps();
+    $table->string('status')->default('pending');
+    $table->string('priority')->default('medium');
 
-            // indexes
-            $table->index(['lead_id', 'status']);
-            $table->index(['user_id', 'status']);
-            $table->index('due_at');
-        });
+    $table->timestamp('due_at')->nullable();
+    $table->timestamp('reminder_at')->nullable();
+    $table->timestamp('completed_at')->nullable();
+
+    $table->text('result')->nullable();
+
+    $table->timestamps();
+
+    $table->index(['lead_id', 'status']);
+    $table->index(['user_id', 'status']);
+    $table->index(['type', 'status']);
+    $table->index(['status', 'due_at']);
+    $table->index('due_at');
+});
     }
 
     /**

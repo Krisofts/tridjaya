@@ -21,17 +21,32 @@ return new class extends Migration
             $table->string('name');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
+
+            // 🏠 ADDRESS DETAIL
             $table->text('address')->nullable();
 
+            // 🌍 WILAYAH.ID STRUCTURE
+            $table->string('province_code')->nullable();
+            $table->string('province_name')->nullable();
+
+            $table->string('city_code')->nullable();
+            $table->string('city_name')->nullable();
+
+            $table->string('district_code')->nullable();
+            $table->string('district_name')->nullable();
+
+            // 💰 SALE TYPE
             $table->enum('sale_type', [
                 'cash',
                 'credit',
             ])->default('cash');
 
+            // 🛒 INTEREST PRODUCT
             $table->string('interest')->nullable();
 
             $table->text('notes')->nullable();
 
+            // 👤 RELATIONS
             $table->foreignId('assigned_to')
                 ->nullable()
                 ->constrained('users')
@@ -49,11 +64,16 @@ return new class extends Migration
 
             $table->timestamps();
 
+            // INDEXES
             $table->index('lead_code');
             $table->index('phone');
             $table->index('sale_type');
             $table->index('branch_id');
             $table->index('assigned_to');
+
+            // 🔥 penting untuk CRM filtering
+            $table->index(['province_code', 'city_code']);
+            $table->index('district_code');
         });
     }
 

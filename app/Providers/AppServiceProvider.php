@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\CRM\Models\CrmLead;
-use App\CRM\Observers\CrmLeadObserver;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        CrmLead::observe(CrmLeadObserver::class);
+        
     }
 }

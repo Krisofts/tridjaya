@@ -23,14 +23,51 @@ return [
     */
     'groups' => [
 
-        'superadmin' => [
-            'title' => 'Super Admin',
-            'description' => 'Full access system',
+
+
+        'owner' => [
+            'title' => 'Owner',
+            'description' => 'Full business access',
+        ],
+
+        'manager' => [
+            'title' => 'Manager',
+            'description' => 'Manage operations and monitoring',
+        ],
+
+        'hrd' => [
+            'title' => 'HRD',
+            'description' => 'Manage employees and HR data',
+        ],
+
+        'finance' => [
+            'title' => 'Finance',
+            'description' => 'Manage financial data',
         ],
 
         'admin' => [
             'title' => 'Admin',
             'description' => 'Manage system data',
+        ],
+
+        'sales' => [
+            'title' => 'Sales',
+            'description' => 'Manage leads and sales activities',
+        ],
+
+        'support' => [
+            'title' => 'Support',
+            'description' => 'Handle customer support',
+        ],
+
+        'driver' => [
+            'title' => 'Driver',
+            'description' => 'Delivery and transport duties',
+        ],
+
+        'pdi' => [
+            'title' => 'PDI',
+            'description' => 'Pre delivery inspection',
         ],
 
         'user' => [
@@ -47,51 +84,24 @@ return [
     */
     'permissions' => [
 
-        /*
-        |--------------------------------------------------------------------------
-        | Dashboard
-        |--------------------------------------------------------------------------
-        */
         'dashboard.view' => 'View dashboard',
 
-        /*
-        |--------------------------------------------------------------------------
-        | Admin
-        |--------------------------------------------------------------------------
-        */
         'admin.access' => 'Access admin panel',
 
-        /*
-        |--------------------------------------------------------------------------
-        | Users
-        |--------------------------------------------------------------------------
-        */
         'users.view' => 'View users',
         'users.create' => 'Create users',
         'users.update' => 'Update users',
         'users.delete' => 'Delete users',
 
-        /*
-        |--------------------------------------------------------------------------
-        | CRM Leads
-        |--------------------------------------------------------------------------
-        */
         'leads.view' => 'View leads',
         'leads.create' => 'Create leads',
         'leads.update' => 'Update leads',
         'leads.delete' => 'Delete leads',
-
         'leads.assign' => 'Assign leads',
         'leads.followup' => 'Manage follow up',
         'leads.activities' => 'Manage lead activities',
 
-        /*
-        |--------------------------------------------------------------------------
-        | Experimental
-        |--------------------------------------------------------------------------
-        */
         'beta.access' => 'Access beta features',
-
     ],
 
     /*
@@ -101,41 +111,62 @@ return [
     */
     'groupPermissions' => [
 
-        /*
-        |--------------------------------------------------------------------------
-        | Super Admin
-        |--------------------------------------------------------------------------
-        */
         'superadmin' => [
             '*',
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Admin
-        |--------------------------------------------------------------------------
-        */
-        'admin' => [
-
-            'dashboard.view',
-
-            'admin.access',
-
-            'users.*',
-
-            'leads.*',
-
+        'owner' => [
+            '*',
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | User
-        |--------------------------------------------------------------------------
-        */
-        'user' => [
-
+        'manager' => [
             'dashboard.view',
+            'users.view',
+            'leads.*',
+        ],
 
+        'hrd' => [
+            'dashboard.view',
+            'users.*',
+        ],
+
+        'finance' => [
+            'dashboard.view',
+        ],
+
+        'admin' => [
+            'dashboard.view',
+            'admin.access',
+            'users.*',
+            'leads.*',
+        ],
+
+        'sales' => [
+            'dashboard.view',
+            'leads.view',
+            'leads.create',
+            'leads.update',
+            'leads.followup',
+            'leads.activities',
+        ],
+
+        'support' => [
+            'dashboard.view',
+            'leads.view',
+            'leads.followup',
+            'leads.activities',
+        ],
+
+        'driver' => [
+            'dashboard.view',
+        ],
+
+        'pdi' => [
+            'dashboard.view',
+        ],
+
+        'user' => [
+            'dashboard.view',
         ],
 
     ],

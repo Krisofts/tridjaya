@@ -2,170 +2,195 @@
 
 namespace App\CRM\Services;
 
+use App\CRM\Events\TaskCompleted;
+use App\CRM\Events\TaskCreated;
 use App\CRM\Models\CrmTask;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class TaskService
 {
-    /**
-     * Create new task manually
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | CREATE TASK
+    |--------------------------------------------------------------------------
+    */
     public function create(array $data): CrmTask
     {
-        return CrmTask::create([
+        $task = CrmTask::create([
             'lead_id' => $data['lead_id'],
-            'user_id' => $data['user_id'] ?? Auth::id(),
+            'user_id' => $data['user_id'] ?? null,
+            'created_by' => Auth::id(),
 
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
 
-            'type' => $data['type'] ?? null, // 👈 penting untuk automation
-
-            'status' => $data['status'] ?? 'pending',
+            'type' => $data['type'] ?? 'follow_up',
             'priority' => $data['priority'] ?? 'medium',
 
-            'due_at' => $data['due_at'] ?? null,
-        ]);
-    }
-
-    /**
-     * Auto create initial follow up
-     */
-    public function createInitialFollowUp(int $leadId, ?int $userId = null): CrmTask
-    {
-        return CrmTask::create([
-            'lead_id' => $leadId,
-            'user_id' => $userId ?? Auth::id(),
-
-            'type' => 'initial_follow_up',
-
-            'title' => 'Initial Follow Up',
-            'description' => 'Hubungi customer untuk follow up awal lead baru.',
+            'due_at' => $data['due_at'] ?? Carbon::now()->addMinutes(15),
+            'reminder_at' => $data['reminder_at'] ?? Carbon::now()->addMinutes(5),
 
             'status' => 'pending',
-            'priority' => 'high',
-
-            'due_at' => now()->addDay(),
-        ]);
-    }
-
-    /**
-     * Mark task as completed + trigger automation
-     */
-    public function complete(CrmTask $task): CrmTask
-    {
-        $task->update([
-            'status' => 'completed',
-            'completed_at' => now(),
         ]);
 
-        // 👇 trigger automation stage change
-        $this->handleAutoStageChange($task);
+        event(new TaskCreated($task));
 
         return $task;
     }
 
-    /**
-     * Start task
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE
+    |--------------------------------------------------------------------------
+    */
+    public function update(CrmTask $task, array $data): CrmTask
+    {
+        $task->update([
+            'title' => $data['title'] ?? $task->title,
+            'description' => $data['description'] ?? $task->description,
+            'type' => $data['type'] ?? $task->type,
+            'priority' => $data['priority'] ?? $task->priority,
+            'due_at' => $data['due_at'] ?? $task->due_at,
+            'reminder_at' => $data['reminder_at'] ?? $task->reminder_at,
+            'user_id' => $data['user_id'] ?? $task->user_id,
+        ]);
+
+        return $task->refresh();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | START
+    |--------------------------------------------------------------------------
+    */
     public function start(CrmTask $task): CrmTask
     {
+        if ($task->status === 'completed') {
+            return $task;
+        }
+
         $task->update([
             'status' => 'in_progress',
         ]);
 
-        return $task;
+        return $task->refresh();
     }
 
-    /**
-     * Cancel task
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | COMPLETE (CRM ENGINE ENTRY POINT)
+    |--------------------------------------------------------------------------
+    */
+    public function complete(
+        CrmTask $task,
+        ?int $resultId = null
+    ): CrmTask {
+        if ($task->status === 'completed') {
+            return $task;
+        }
+
+        $task->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+
+            // ✅ UPDATED: result_id (bukan string)
+            'result_id' => $resultId,
+        ]);
+
+        // 🚀 trigger CRM workflow engine
+        event(new TaskCompleted($task, $resultId));
+
+        return $task->refresh();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CANCEL
+    |--------------------------------------------------------------------------
+    */
     public function cancel(CrmTask $task): CrmTask
     {
+        if ($task->status === 'completed') {
+            return $task;
+        }
+
         $task->update([
             'status' => 'cancelled',
         ]);
 
-        return $task;
+        return $task->refresh();
     }
 
-    /**
-     * Auto stage change logic
-     */
-    protected function handleAutoStageChange(CrmTask $task): void
+    /*
+    |--------------------------------------------------------------------------
+    | DELETE
+    |--------------------------------------------------------------------------
+    */
+    public function delete(CrmTask $task): bool
     {
-        $lead = $task->lead;
-
-        if (!$lead) return;
-
-        // 🚨 hanya trigger dari initial follow up
-        if ($task->type !== 'initial_follow_up') {
-            return;
-        }
-
-        // 🚨 kalau sudah bukan stage pertama, skip
-        if ($lead->pipeline_stage_id != 1) {
-            return;
-        }
-
-        $nextStage = $lead->pipeline->stages()
-            ->orderBy('sort_order')
-            ->skip(1)
-            ->first();
-
-        if ($nextStage) {
-            $lead->update([
-                'pipeline_stage_id' => $nextStage->id,
-            ]);
-        }
+        return $task->delete();
     }
 
-    /**
-     * Get tasks by lead
-     */
-    public function getByLead(int $leadId)
+    /*
+    |--------------------------------------------------------------------------
+    | GET BY LEAD
+    |--------------------------------------------------------------------------
+    */
+    public function getActiveByLead(int $leadId)
     {
-        return CrmTask::query()
-            ->where('lead_id', $leadId)
+        return CrmTask::where('lead_id', $leadId)
+            ->whereIn('status', ['pending', 'in_progress'])
             ->latest()
             ->get();
     }
 
-    /**
-     * Get active tasks
-     */
-    public function getActive(?int $userId = null)
+    public function getCompletedByLead(int $leadId)
     {
-        return CrmTask::query()
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
+        return CrmTask::where('lead_id', $leadId)
+            ->where('status', 'completed')
+            ->latest()
+            ->get();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MY TASKS
+    |--------------------------------------------------------------------------
+    */
+    public function getMyTasks(int $userId)
+    {
+        return CrmTask::where('user_id', $userId)
             ->whereIn('status', ['pending', 'in_progress'])
             ->orderBy('due_at')
             ->get();
     }
 
-    /**
-     * Get overdue tasks
-     */
-    public function getOverdue(?int $userId = null)
+    /*
+    |--------------------------------------------------------------------------
+    | OVERDUE TASKS
+    |--------------------------------------------------------------------------
+    */
+    public function getOverdueTasks()
     {
-        return CrmTask::query()
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->whereIn('status', ['pending', 'in_progress'])
+        return CrmTask::whereIn('status', ['pending', 'in_progress'])
             ->whereNotNull('due_at')
             ->where('due_at', '<', now())
             ->orderBy('due_at')
             ->get();
     }
 
-    /**
-     * Get today tasks
-     */
-    public function getToday(?int $userId = null)
+    /*
+    |--------------------------------------------------------------------------
+    | QUICK FOLLOW UP
+    |--------------------------------------------------------------------------
+    */
+    public function createFollowUp(int $leadId, string $title): CrmTask
     {
-        return CrmTask::query()
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->whereDate('due_at', now())
-            ->orderBy('due_at')
-            ->get();
+        return $this->create([
+            'lead_id' => $leadId,
+            'title' => $title,
+            'type' => 'follow_up',
+        ]);
     }
 }

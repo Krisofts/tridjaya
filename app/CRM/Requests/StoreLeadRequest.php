@@ -14,25 +14,106 @@ class StoreLeadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lead_source_id' => ['nullable', 'exists:crm_lead_sources,id'],
+            /*
+            |--------------------------------------------------------------------------
+            | LEAD CORE
+            |--------------------------------------------------------------------------
+            */
+            'lead_source_id' => [
+                'nullable',
+                'integer',
+                'exists:crm_lead_sources,id',
+            ],
 
-            'pipeline_id' => ['required', 'exists:crm_pipelines,id'],
+            'pipeline_id' => [
+                'required',
+                'integer',
+                'exists:crm_pipelines,id',
+            ],
 
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:30',
+            ],
 
-            'email' => ['nullable', 'email'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+            ],
 
-            'address' => ['nullable', 'string'],
+            'address' => [
+                'nullable',
+                'string',
+            ],
 
-            'interest' => ['nullable', 'string', 'max:255'],
+            /*
+            |--------------------------------------------------------------------------
+            | REGION (STORE ONLY CODE)
+            |--------------------------------------------------------------------------
+            */
+            'province_code' => [
+                'nullable',
+                'string',
+                'max:20',
+            ],
 
-            'notes' => ['nullable', 'string'],
+            'city_code' => [
+                'nullable',
+                'string',
+                'max:20',
+            ],
 
-            'assigned_to' => ['nullable', 'exists:users,id'],
+            'district_code' => [
+                'nullable',
+                'string',
+                'max:20',
+            ],
 
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            /*
+            |--------------------------------------------------------------------------
+            | SALES INFO
+            |--------------------------------------------------------------------------
+            */
+            'sale_type' => [
+                'nullable',
+                'in:cash,credit',
+            ],
+
+            'interest' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'notes' => [
+                'nullable',
+                'string',
+            ],
+
+            /*
+            |--------------------------------------------------------------------------
+            | RELATIONS
+            |--------------------------------------------------------------------------
+            */
+            'assigned_to' => [
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
+
+            'branch_id' => [
+                'nullable',
+                'integer',
+                'exists:branches,id',
+            ],
         ];
     }
 }

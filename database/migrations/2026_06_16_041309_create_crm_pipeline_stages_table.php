@@ -23,6 +23,9 @@ return new class extends Migration
             $table->string('color')
                 ->nullable();
 
+            $table->string('temperature')
+                ->default('cold');
+
             $table->boolean('is_default')
                 ->default(false);
 
@@ -37,6 +40,11 @@ return new class extends Migration
             $table->index([
                 'pipeline_id',
                 'sort_order'
+            ]);
+
+            $table->index([
+                'pipeline_id',
+                'temperature'
             ]);
         });
     }

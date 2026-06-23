@@ -1,247 +1,239 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="User Management" :breadcrumbs="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Users']]" />
+<x-common.page-breadcrumb pageTitle="User Management" :breadcrumbs="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Users']]" />
 
 
-    <x-ui.table title="Users List" description="Manage and monitor all registered users in your system.">
+<x-ui.table title="Users List" description="Manage and monitor all registered users in your system.">
 
-        {{-- HEADER ACTIONS --}}
-        <x-slot:header>
-            <button
-                class="shadow-theme-xs inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
-                Export
-                <x-icons.download class="fill-current" />
-            </button>
+    {{-- HEADER ACTIONS --}}
+    <x-slot:header>
+        <button
+            class="shadow-theme-xs inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-gray-700 ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03]">
+            Export
+            <x-icons.download class="fill-current" />
+        </button>
 
-            <a href="{{ route('users.create') }}"
-                class="bg-brand-500 shadow-theme-xs hover:bg-brand-600 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition">
-                <x-icons.add class="fill-current" />
-                Add Users
-            </a>
-        </x-slot:header>
+        <a href="{{ route('users.create') }}"
+            class="bg-brand-500 shadow-theme-xs hover:bg-brand-600 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition">
+            <x-icons.add class="fill-current" />
+            Add Users
+        </a>
+    </x-slot:header>
 
-        {{-- TOOLBAR (SEARCH + FILTER) --}}
-        <x-slot:toolbar>
-            <form method="GET">
-                <div class="flex gap-3 sm:justify-between">
+    {{-- TOOLBAR (SEARCH + FILTER) --}}
+    <x-slot:toolbar>
+        <form method="GET">
+            <div class="flex gap-3 sm:justify-between">
 
-                    {{-- SEARCH --}}
-                    <div class="relative flex-1 sm:flex-auto">
-                        <span class="absolute top-1/2 left-4 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                            <x-icons.search class="fill-current" />
-                        </span>
+                {{-- SEARCH --}}
+                <div class="relative flex-1 sm:flex-auto">
+                    <span class="absolute top-1/2 left-4 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                        <x-icons.search class="fill-current" />
+                    </span>
 
-                        <input type="text" name="search" value="{{ request('search') }}"
-                            placeholder="Search name or email..."
-                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10
-                        h-11 w-full rounded-lg border border-gray-300 bg-transparent
-                        py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400
-                        focus:ring-3 focus:outline-hidden sm:w-[300px] sm:min-w-[300px]
-                        dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-                        dark:placeholder:text-white/30">
-                    </div>
-
-                    {{-- FILTER --}}
-                    <x-ui.filter-dropdown label="Filter">
-
-                        <x-ui.filter-field type="select" label="Branch" placeholder="All Branch" :options="$branches"
-                            :model="null" :selected="request('branch')" name="branch" />
-
-                        <x-ui.filter-field type="select" label="Group" name="group" placeholder="All Groups"
-                            :selected="request('group')" :options="collect(config('auth_groups.groups'))->map(function ($group, $key) {
-                                return [
-                                    'value' => $key,
-                                    'label' => $group['title'],
-                                ];
-                            })" />
-
-
-
-                    </x-ui.filter-dropdown>
-
+                    <input type="text" name="search" value="{{ request('search') }}"
+                    placeholder="Search name or email..."
+                    class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10
+                    h-11 w-full rounded-lg border border-gray-300 bg-transparent
+                    py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400
+                    focus:ring-3 focus:outline-hidden sm:w-[300px] sm:min-w-[300px]
+                    dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
+                    dark:placeholder:text-white/30">
                 </div>
-            </form>
-        </x-slot:toolbar>
+
+                {{-- FILTER --}}
+                <x-ui.filter-dropdown label="Filter">
+
+                    <x-ui.filter-field type="select" label="Branch" placeholder="All Branch" :options="$branches"
+                        :model="null" :selected="request('branch')" name="branch" />
+
+                    <x-ui.filter-field type="select" label="Group" name="group" placeholder="All Groups"
+                        :selected="request('group')" :options="collect(config('auth_groups.groups'))->map(function ($group, $key) {
+                        return [
+                        'value' => $key,
+                        'label' => $group['title'],
+                        ];
+                        })" />
+
+
+
+                </x-ui.filter-dropdown>
+
+            </div>
+        </form>
+    </x-slot:toolbar>
 
 
 
 
 
-        {{-- TABLE HEADER --}}
-        <thead class="border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
-            <tr class="border-gray-100 dark:border-white/[0.05]">
+    {{-- TABLE HEADER --}}
+    <thead class="border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
+        <tr class="border-gray-100 dark:border-white/[0.05]">
 
-                <th class="px-6 py-3 text-left whitespace-nowrap">
-                    <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">
-                        Name
+            <th class="px-6 py-3 text-left whitespace-nowrap">
+                <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">
+                    Name
+                </p>
+
+            </th>
+
+            <th class="px-6 py-3">
+                <div class="flex items-center">
+                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                        Email
                     </p>
+                </div>
+            </th>
 
-                </th>
+            <th class="px-6 py-3">
+                <div class="flex items-center">
+                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                        Branch
+                    </p>
+                </div>
+            </th>
 
-                <th class="px-6 py-3">
-                    <div class="flex items-center">
-                        <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                            Email
-                        </p>
-                    </div>
-                </th>
+            <th class="px-6 py-3">
+                <div class="flex items-center">
+                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                        Groups
+                    </p>
+                </div>
+            </th>
 
-                <th class="px-6 py-3">
-                    <div class="flex items-center">
-                        <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                            Branch
-                        </p>
-                    </div>
-                </th>
+            <th class="px-6 py-3">
+                <div class="flex items-center">
+                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+                        Status
+                    </p>
+                </div>
+            </th>
 
-                <th class="px-6 py-3">
-                    <div class="flex items-center">
-                        <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                            Groups
-                        </p>
-                    </div>
-                </th>
+            <th class="px-6 py-3 text-right whitespace-nowrap"></th>
 
-                <th class="px-6 py-3">
-                    <div class="flex items-center">
-                        <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                            Status
-                        </p>
-                    </div>
-                </th>
+        </tr>
+    </thead>
 
-                <th class="px-6 py-3 text-right whitespace-nowrap"></th>
+    {{-- TABLE BODY --}}
+    <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
 
-            </tr>
-        </thead>
+        @forelse ($users as $user)
+        <tr>
 
-        {{-- TABLE BODY --}}
-        <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <td class="p-4 whitespace-nowrap">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-400">      {{ $user->name }}</span>
+            </td>
 
-            @forelse ($users as $user)
-                <tr>
-
-                    {{-- NAME --}}
-                    <td class="px-6 py-3.5">
-                        <p class="font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                            {{ $user->name }}
-                        </p>
-                    </td>
-
-                    {{-- EMAIL --}}
-                    <td class="px-6 py-3.5">
-                        <p class="text-gray-500 text-theme-sm dark:text-gray-400">
-                            {{ $user->email }}
-                        </p>
-                    </td>
-
-                    {{-- BRANCH --}}
-                    <td class="px-6 py-3.5">
-                        <p class="text-gray-500 text-theme-sm dark:text-gray-400">
-                            {{ $user->branch?->name ?? '-' }}
-                        </p>
+            <td class="p-4 whitespace-nowrap">
+                <p class="text-sm text-gray-700 dark:text-gray-400">
+                    {{ $user->email }}
+                </p>
+            </td>
 
 
+            <td class="p-4 whitespace-nowrap">
+                <p class="text-sm text-gray-700 dark:text-gray-400">
+                    {{ $user->branch?->name ?? '-' }}
+                </p>
+            </td>
 
-                    </td>
 
-                    {{-- GROUPS --}}
-                    <td class="px-6 py-3.5">
+            <td class="p-4 whitespace-nowrap">
+                <p class="text-sm text-gray-700 dark:text-gray-400">
+                    {{ $user->groups->pluck('group')->implode(', ') ?: '-' }}
+                </p>
+            </td>
 
-                        <div class="text-sm text-gray-500 dark:text-gray-400">
-                            {{ $user->groups->pluck('group')->implode(', ') ?: '-' }}
-                        </div>
 
-                    </td>
+            {{-- STATUS --}}
+            <td class="px-6 py-3.5">
+                <x-ui.badge size="sm" :color="$user->deleted_at ? 'error' : 'success'">
+                    {{ $user->deleted_at ? 'Deleted' : 'Active' }}
+                </x-ui.badge>
+            </td>
 
-                    {{-- STATUS --}}
-                    <td class="px-6 py-3.5">
-                        <x-ui.badge size="sm" :color="$user->deleted_at ? 'error' : 'success'">
-                            {{ $user->deleted_at ? 'Deleted' : 'Active' }}
-                        </x-ui.badge>
-                    </td>
-
-                    {{-- ACTION --}}
+            {{-- ACTION --}}
 
 
 
-                    <td class="px-6 py-4 text-right whitespace-nowrap">
-                        <x-common.table-dropdown>
+            <td class="px-6 py-4 text-right whitespace-nowrap">
+                <x-common.table-dropdown>
 
-                            {{-- BUTTON TRIGGER --}}
-                            <x-slot name="button">
-                                <button type="button"
-                                    class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                                    <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path fill-rule="evenodd" clip-rule="evenodd"
-                                            d="M5.99902 10.245C6.96552 10.245 7.74902 11.0285 7.74902 11.995V12.005C7.74902 12.9715 6.96552 13.755 5.99902 13.755C5.03253 13.755 4.24902 12.9715 4.24902 12.005V11.995C4.24902 11.0285 5.03253 10.245 5.99902 10.245ZM17.999 10.245C18.9655 10.245 19.749 11.0285 19.749 11.995V12.005C19.749 12.9715 18.9655 13.755 17.999 13.755C17.0325 13.755 16.249 12.9715 16.249 12.005V11.995C16.249 11.0285 17.0325 10.245 17.999 10.245ZM13.749 11.995C13.749 11.0285 12.9655 10.245 11.999 10.245C11.0325 10.245 10.249 11.0285 10.249 11.995V12.005C10.249 12.9715 11.0325 13.755 11.999 13.755C12.9655 13.755 13.749 12.9715 13.749 12.005V11.995Z"
-                                            fill=""></path>
-                                    </svg>
-                                </button>
-                            </x-slot>
+                    {{-- BUTTON TRIGGER --}}
+                    <x-slot name="button">
+                        <button type="button"
+                            class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                            <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd"
+                                    d="M5.99902 10.245C6.96552 10.245 7.74902 11.0285 7.74902 11.995V12.005C7.74902 12.9715 6.96552 13.755 5.99902 13.755C5.03253 13.755 4.24902 12.9715 4.24902 12.005V11.995C4.24902 11.0285 5.03253 10.245 5.99902 10.245ZM17.999 10.245C18.9655 10.245 19.749 11.0285 19.749 11.995V12.005C19.749 12.9715 18.9655 13.755 17.999 13.755C17.0325 13.755 16.249 12.9715 16.249 12.005V11.995C16.249 11.0285 17.0325 10.245 17.999 10.245ZM13.749 11.995C13.749 11.0285 12.9655 10.245 11.999 10.245C11.0325 10.245 10.249 11.0285 10.249 11.995V12.005C10.249 12.9715 11.0325 13.755 11.999 13.755C12.9655 13.755 13.749 12.9715 13.749 12.005V11.995Z"
+                                    fill=""></path>
+                            </svg>
+                        </button>
+                    </x-slot>
 
-                            {{-- MENU CONTENT --}}
-                            <x-slot name="content">
+                    {{-- MENU CONTENT --}}
+                    <x-slot name="content">
 
-                                <a href="{{ route('users.show', $user) }}"
-                                    class="flex w-full px-3 py-2 font-medium text-left text-gray-500 rounded-lg text-theme-xs hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
-                                    View
-                                </a>
+                        <a href="{{ route('users.show', $user) }}"
+                            class="flex w-full px-3 py-2 font-medium text-left text-gray-500 rounded-lg text-theme-xs hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                            View
+                        </a>
 
-                                <a href="{{ route('users.edit', $user) }}"
-                                    class="flex w-full px-3 py-2 font-medium text-left text-gray-500 rounded-lg text-theme-xs hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
-                                    Edit
-                                </a>
+                        <a href="{{ route('users.edit', $user) }}"
+                            class="flex w-full px-3 py-2 font-medium text-left text-gray-500 rounded-lg text-theme-xs hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                            Edit
+                        </a>
 
-                                @if (!$user->deleted_at)
-                                    <form action="{{ route('users.destroy', $user) }}" method="POST"
-                                        onsubmit="return confirm('Delete user?')">
-                                        @csrf
-                                        @method('DELETE')
+                        @if (!$user->deleted_at)
+                        <form action="{{ route('users.destroy', $user) }}" method="POST"
+                            onsubmit="return confirm('Delete user?')">
+                            @csrf
+                            @method('DELETE')
 
-                                        <button type="submit"
-                                            class="flex w-full px-3 py-2 font-medium text-left text-red-500 rounded-lg text-theme-xs hover:bg-red-50 hover:text-red-600 dark:hover:bg-white/5">
-                                            Delete
-                                        </button>
-                                    </form>
-                                @else
-                                    <form action="{{ route('users.restore', $user->id) }}" method="POST">
-                                        @csrf
+                            <button type="submit"
+                                class="flex w-full px-3 py-2 font-medium text-left text-red-500 rounded-lg text-theme-xs hover:bg-red-50 hover:text-red-600 dark:hover:bg-white/5">
+                                Delete
+                            </button>
+                        </form>
+                        @else
+                        <form action="{{ route('users.restore', $user->id) }}" method="POST">
+                            @csrf
 
-                                        <button type="submit"
-                                            class="flex w-full px-3 py-2 font-medium text-left text-green-500 rounded-lg text-theme-xs hover:bg-green-50 hover:text-green-600 dark:hover:bg-white/5">
-                                            Restore
-                                        </button>
-                                    </form>
-                                @endif
+                            <button type="submit"
+                                class="flex w-full px-3 py-2 font-medium text-left text-green-500 rounded-lg text-theme-xs hover:bg-green-50 hover:text-green-600 dark:hover:bg-white/5">
+                                Restore
+                            </button>
+                        </form>
+                        @endif
 
-                            </x-slot>
+                    </x-slot>
 
-                        </x-common.table-dropdown>
-                    </td>
-
-
-
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-                        No users found
-                    </td>
-                </tr>
-            @endforelse
-
-        </tbody>
-
-        {{-- FOOTER --}}
-        <x-slot name="footer">
+                </x-common.table-dropdown>
+            </td>
 
 
 
-            <x-ui.pagination :paginator="$users" />
-        </x-slot:footer>
+        </tr>
+        @empty
+        <tr>
+            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                No users found
+            </td>
+        </tr>
+        @endforelse
 
-    </x-ui.table>
+    </tbody>
+
+    {{-- FOOTER --}}
+    <x-slot name="footer">
+
+
+
+        <x-ui.pagination :paginator="$users" />
+    </x-slot:footer>
+
+</x-ui.table>
 @endsection

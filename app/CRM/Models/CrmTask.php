@@ -2,74 +2,80 @@
 
 namespace App\CRM\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CrmTask extends Model
 {
+    use HasFactory;
+
     protected $table = 'crm_tasks';
 
     protected $fillable = [
         'lead_id',
         'user_id',
+        'created_by',
         'title',
         'description',
+        'type',
         'status',
         'priority',
         'due_at',
+        'reminder_at',
         'completed_at',
+        'result',
     ];
 
     protected $casts = [
         'due_at' => 'datetime',
+        'reminder_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
 
-    /*
-    |---------------------------------------------
-    | RELATIONS
-    |---------------------------------------------
-    */
-
+    /**
+     * Lead owner.
+     */
     public function lead(): BelongsTo
     {
         return $this->belongsTo(CrmLead::class, 'lead_id');
     }
 
-    public function user(): BelongsTo
+    /**
+     * Assigned user.
+     */
+    public function assignee(): BelongsTo
     {
-        return $this->belongsTo(\App\User\Models\User::class, 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    /*
-    |---------------------------------------------
-    | SCOPES
-    |---------------------------------------------
-    */
+    /**
+     * User who created the task.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
+    /**
+     * Scope pending tasks.
+     */
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
     }
 
-    public function scopeInProgress($query)
-    {
-        return $query->where('status', 'in_progress');
-    }
-
+    /**
+     * Scope completed tasks.
+     */
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
     }
 
-    public function scopeActive($query)
-    {
-        return $query->whereIn('status', [
-            'pending',
-            'in_progress',
-        ]);
-    }
-
+    /**
+     * Scope overdue tasks.
+     */
     public function scopeOverdue($query)
     {
         return $query
@@ -78,37 +84,53 @@ class CrmTask extends Model
             ->where('due_at', '<', now());
     }
 
-    public function scopeToday($query)
-    {
-        return $query->whereDate('due_at', now());
-    }
-
-    public function scopeUpcoming($query)
-    {
-        return $query
-            ->where('status', 'pending')
-            ->whereNotNull('due_at')
-            ->where('due_at', '>', now());
-    }
-
-    /*
-    |---------------------------------------------
-    | HELPERS
-    |---------------------------------------------
-    */
-
-    public function isOverdue(): bool
-    {
-        return $this->status !== 'completed'
-            && $this->due_at
-            && $this->due_at->isPast();
-    }
-
-    public function markAsCompleted(): void
+    /**
+     * Mark task as completed.
+     */
+    public function markAsCompleted(?string $result = null): void
     {
         $this->update([
             'status' => 'completed',
             'completed_at' => now(),
+            'result' => $result,
         ]);
+    }
+
+    /**
+     * Mark task as cancelled.
+     */
+    public function markAsCancelled(): void
+    {
+        $this->update([
+            'status' => 'cancelled',
+        ]);
+    }
+
+    /**
+     * Start task.
+     */
+    public function markAsInProgress(): void
+    {
+        $this->update([
+            'status' => 'in_progress',
+        ]);
+    }
+
+    /**
+     * Check if task is overdue.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        return in_array($this->status, ['pending', 'in_progress'])
+            && $this->due_at
+            && $this->due_at->isPast();
+    }
+
+    /**
+     * Check if task is completed.
+     */
+    public function getIsCompletedAttribute(): bool
+    {
+        return $this->status === 'completed';
     }
 }
