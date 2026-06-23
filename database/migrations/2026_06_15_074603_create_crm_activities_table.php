@@ -38,9 +38,7 @@ return new class extends Migration
 
             // ⭐ AUTO STAGE UPDATE (optional kalau kamu mau automation)
             $table->foreignId('stage_id')
-                ->nullable()
-                ->constrained('crm_pipeline_stages')
-                ->nullOnDelete();
+    ->nullable();
 
             // TIMESTAMP
             $table->timestamps();

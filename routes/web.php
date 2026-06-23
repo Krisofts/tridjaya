@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\CRM\Controllers\LeadController;
 use App\CRM\Controllers\TaskController;
+use App\Dashboard\Sales\Controllers\SalesController;
 use App\User\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,9 +27,22 @@ Route::get('/basic-tables', function () {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware(['auth', 'verified'])
+    ->prefix('dashboard')
+    ->name('dashboard.')
+    ->group(function () {
+
+        // MAIN DASHBOARD
+        Route::get('/', function () {
+            return view('dashboard');
+        })->name('home');
+
+        // SALES DASHBOARD
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::get('/', [SalesController::class, 'index'])
+                ->name('index');
+        });
+    });
 
 
 
@@ -92,5 +106,5 @@ Route::middleware(['auth'])->prefix('users')->name('users.')->group(function () 
 |--------------------------------------------------------------------------
 */
 
-require __DIR__.'/crm.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/crm.php';
+require __DIR__ . '/auth.php';
