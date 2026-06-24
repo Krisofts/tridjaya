@@ -1,11 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Edit Lead" :breadcrumbs="[
-        ['label' => 'Home', 'url' => route('dashboard')],
-        ['label' => 'CRM Leads', 'url' => route('crm.leads.index')],
-        ['label' => 'Edit'],
-    ]" />
+
 
     <form action="{{ route('crm.leads.update', $lead) }}" method="POST" class="space-y-6">
         @csrf

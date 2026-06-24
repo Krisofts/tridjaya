@@ -2,14 +2,7 @@
 
 @section('content')
 
-<x-common.page-breadcrumb
-    pageTitle="User Detail"
-    :breadcrumbs="[
-        ['label' => 'Home', 'url' => route('dashboard')],
-        ['label' => 'Users', 'url' => route('users.index')],
-        ['label' => 'Detail'],
-    ]"
-/>
+
 
 <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
 

@@ -1,10 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<x-common.page-breadcrumb pageTitle="CRM Leads" :breadcrumbs="[
-    ['label' => 'Home', 'url' => route('dashboard')],
-    ['label' => 'CRM Leads'],
-    ]" />
+
 
 <x-ui.table
     title="CRM Leads"

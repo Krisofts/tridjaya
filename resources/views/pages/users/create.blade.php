@@ -1,11 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Create User" :breadcrumbs="[
-        ['label' => 'Home', 'url' => route('dashboard')],
-        ['label' => 'Users', 'url' => route('users.index')],
-        ['label' => 'Create'],
-    ]" />
+   
 
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">

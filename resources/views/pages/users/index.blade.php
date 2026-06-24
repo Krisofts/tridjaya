@@ -1,8 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<x-common.page-breadcrumb pageTitle="User Management" :breadcrumbs="[['label' => 'Home', 'url' => route('dashboard')], ['label' => 'Users']]" />
-
 
 <x-ui.table title="Users List" description="Manage and monitor all registered users in your system.">
 
