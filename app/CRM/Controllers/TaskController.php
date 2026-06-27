@@ -2,66 +2,70 @@
 
 namespace App\CRM\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\CRM\Models\CrmTask;
 use App\CRM\Services\TaskService;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
     public function __construct(
-        protected TaskService $taskService
+        protected TaskService $tasks,
     ) {}
 
-    /*
-    |--------------------------------------------------------------------------
-    | START TASK
-    |--------------------------------------------------------------------------
-    */
-    public function start(CrmTask $task)
-    {
-        $this->taskService->start($task);
+    // -------------------------------------------------------------------------
+    // START
+    // -------------------------------------------------------------------------
 
-        return back()->with('success', 'Task started');
+    public function start(CrmTask $task): RedirectResponse
+    {
+        $this->tasks->start($task);
+
+        return $this->redirectToLead($task, 'Task berhasil dimulai.');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPLETE TASK
-    |--------------------------------------------------------------------------
-    */
-    public function complete(Request $request, CrmTask $task)
+    // -------------------------------------------------------------------------
+    // COMPLETE
+    // -------------------------------------------------------------------------
+
+    public function complete(Request $request, CrmTask $task): RedirectResponse
     {
         $validated = $request->validate([
-            'description' => 'nullable|string',
-            'result'      => 'nullable|string|max:1000',
+            'description' => ['nullable', 'string'],
+            'result_id'   => ['nullable', 'exists:crm_results,id'],
         ]);
 
-        // update description dulu kalau diisi/diubah di modal
-        if ($request->has('description')) {
-            $this->taskService->update($task, [
+        if (filled($validated['description'] ?? null)) {
+            $this->tasks->update($task, [
                 'description' => $validated['description'],
             ]);
         }
 
-        // baru tandai selesai + simpan result
-        $this->taskService->complete(
-            $task,
-            $validated['result'] ?? null
-        );
+        $this->tasks->complete($task, $validated['result_id'] ?? null);
 
-        return back()->with('success', 'Task marked as completed');
+        return $this->redirectToLead($task, 'Task berhasil diselesaikan.');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CANCEL TASK
-    |--------------------------------------------------------------------------
-    */
-    public function cancel(CrmTask $task)
-    {
-        $this->taskService->cancel($task);
+    // -------------------------------------------------------------------------
+    // CANCEL
+    // -------------------------------------------------------------------------
 
-        return back()->with('success', 'Task cancelled');
+    public function cancel(CrmTask $task): RedirectResponse
+    {
+        $this->tasks->cancel($task);
+
+        return $this->redirectToLead($task, 'Task berhasil dibatalkan.');
+    }
+
+    // -------------------------------------------------------------------------
+    // PRIVATE
+    // -------------------------------------------------------------------------
+
+    private function redirectToLead(CrmTask $task, string $message): RedirectResponse
+    {
+        return redirect()
+            ->route('crm.leads.show', $task->lead_id)
+            ->with('success', $message);
     }
 }

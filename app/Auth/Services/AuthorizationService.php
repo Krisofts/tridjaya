@@ -265,4 +265,22 @@ class AuthorizationService
     {
         return $this->acl($user)['permissions'];
     }
+
+    /*
+|--------------------------------------------------------------------------
+| LOGIN REDIRECT
+|--------------------------------------------------------------------------
+*/
+public function redirectRoute(User $user): string
+{
+    $routes = config('auth_redirect.groups', []);
+
+    foreach ($this->getGroups($user) as $group) {
+        if (isset($routes[$group])) {
+            return $routes[$group];
+        }
+    }
+
+    return config('auth_redirect.default', 'dashboard');
+}
 }

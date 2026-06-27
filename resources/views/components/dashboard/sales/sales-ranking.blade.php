@@ -35,147 +35,159 @@
      id="{{ $uid }}">
 
     {{-- Header --}}
-    <div class="mb-5 flex items-center justify-between">
-        <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-white/90">Ranking Sales</p>
-            <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{{ $monthLabel }}</p>
-        </div>
+    {{-- Header --}}
+<div class="mb-5 flex justify-between">
+    <div>
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white/90">
+            Ranking Sales
+        </h3>
 
-        {{-- Titik tiga --}}
-        <div class="relative">
-            <button @click="open = !open" @click.outside="open = false"
-                class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400
-                       hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="5"  r="1.5"/>
-                    <circle cx="12" cy="12" r="1.5"/>
-                    <circle cx="12" cy="19" r="1.5"/>
-                </svg>
+        <p class="text-theme-sm mt-1 text-gray-500 dark:text-gray-400">
+            Performa sales bulan {{ $monthLabel }}
+        </p>
+    </div>
+
+    <div class="relative h-fit" x-data="{ openDropDown: false }">
+
+        <button
+            @click="openDropDown = !openDropDown"
+            :class="openDropDown
+                ? 'text-gray-700 dark:text-white'
+                : 'text-gray-400 hover:text-gray-700 dark:hover:text-white'">
+
+            <svg class="fill-current" width="24" height="24"
+                 viewBox="0 0 24 24" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                      d="M10.2441 6C10.2441 5.0335 11.0276 4.25 11.9941 4.25H12.0041C12.9706 4.25 13.7541 5.0335 13.7541 6C13.7541 6.9665 12.9706 7.75 12.0041 7.75H11.9941C11.0276 7.75 10.2441 6.9665 10.2441 6ZM10.2441 18C10.2441 17.0335 11.0276 16.25 11.9941 16.25H12.0041C12.9706 16.25 13.7541 17.0335 13.7541 18C13.7541 18.9665 12.9706 19.75 12.0041 19.75H11.9941C11.0276 19.75 10.2441 18.9665 10.2441 18ZM11.9941 10.25C11.0276 10.25 10.2441 11.0335 10.2441 12C10.2441 12.9665 11.0276 13.75 11.9941 13.75H12.0041C12.9706 13.75 13.7541 12.9665 13.7541 12C13.7541 11.0335 12.9706 10.25 12.0041 10.25H11.9941Z">
+                </path>
+
+            </svg>
+        </button>
+
+        <div
+            x-show="openDropDown"
+            @click.outside="openDropDown = false"
+            x-transition
+            class="shadow-theme-lg dark:bg-gray-dark absolute top-full right-0 z-40 mt-2 w-48 space-y-1 rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800"
+            style="display: none;">
+
+            <button
+                @click="showAll = true; openDropDown = false"
+                class="text-theme-xs flex w-full rounded-lg px-3 py-2 text-left font-medium
+                       text-gray-500 hover:bg-gray-100 hover:text-gray-700
+                       dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                Lihat Semua {{ $total }} Sales
             </button>
 
-            <div x-show="open"
-                 x-transition:enter="transition ease-out duration-100"
-                 x-transition:enter-start="opacity-0 scale-95"
-                 x-transition:enter-end="opacity-100 scale-100"
-                 x-transition:leave="transition ease-in duration-75"
-                 x-transition:leave-start="opacity-100 scale-100"
-                 x-transition:leave-end="opacity-0 scale-95"
-                 class="absolute right-0 top-9 z-10 w-48 overflow-hidden rounded-xl border border-gray-200
-                        bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
-                 style="display: none;">
-                <button @click="showAll = true; open = false"
-                    class="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm
-                           text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-                    </svg>
-                    Lihat semua {{ $total }} sales
-                </button>
-                <div class="border-t border-gray-100 dark:border-gray-800"></div>
-                <button @click="showAll = false; open = false"
-                    class="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm
-                           text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="18 15 12 9 6 15"/>
-                    </svg>
-                    Top 10 saja
-                </button>
-            </div>
-        </div>
-    </div>
+            <button
+                @click="showAll = false; openDropDown = false"
+                class="text-theme-xs flex w-full rounded-lg px-3 py-2 text-left font-medium
+                       text-gray-500 hover:bg-gray-100 hover:text-gray-700
+                       dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
+                Tampilkan Top 10
+            </button>
 
-    {{-- Column headers --}}
-    <div class="mb-2 grid grid-cols-12 gap-2 px-1 text-xs font-medium text-gray-400 dark:text-gray-500">
-        <div class="col-span-1">#</div>
-        <div class="col-span-4">Sales</div>
-        <div class="col-span-2 text-center">Unit hari ini</div>
-        <div class="col-span-2 text-center">Unit bulan ini</div>
-        <div class="col-span-3 text-right">Revenue</div>
+        </div>
+
     </div>
+</div>
+
+    
 
     {{-- Rows — semua dari Blade, Alpine hanya toggle visibility --}}
-    <div class="divide-y divide-gray-100 dark:divide-gray-800">
-        @forelse($allRankings as $i => $row)
-        @php
-            $pct   = $maxUnit > 0 ? round($row['unit_current_month'] / $maxUnit * 100) : 0;
-            $color = $avatarColors[$i % count($avatarColors)];
-            $isTop = $i < 10;
-        @endphp
+    {{-- Rows --}}
+<div class="divide-y divide-gray-100 dark:divide-gray-800">
+    @forelse($allRankings as $i => $row)
 
-        <div class="grid grid-cols-12 items-center gap-2 py-3"
-             @if(!$isTop) x-show="showAll" style="display: none;" @endif>
+    @php
+        $isTop = $i < 10;
+    @endphp
 
-            {{-- Rank --}}
-            <div class="col-span-1 text-sm font-medium">
-                @if($i < 3) {{ $medals[$i] }}
-                @else <span class="text-gray-400 dark:text-gray-500">{{ $row['ranking'] }}</span>
-                @endif
-            </div>
+    <div class="py-3"
+         @if(!$isTop) x-show="showAll" style="display: none;" @endif>
 
-            {{-- Avatar + Name --}}
-            <div class="col-span-4 flex min-w-0 items-center gap-2.5">
-                <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full
-                            text-xs font-semibold {{ $color['bg'] }} {{ $color['text'] }}">
-                    {{ $initials($row['sales_name']) }}
+        <div class="flex items-center justify-between gap-3">
+
+            {{-- Left --}}
+            <div class="flex min-w-0 items-center gap-3">
+
+                {{-- Ranking --}}
+                <div class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 shadow-xs dark:border-gray-800">
+                    @if($i < 3)
+                        <span class="text-lg">{{ $medals[$i] }}</span>
+                    @else
+                        <span class="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                            {{ $row['ranking'] }}
+                        </span>
+                    @endif
                 </div>
+
+                {{-- Sales Info --}}
                 <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-gray-800 dark:text-white/90">
+                    <h4 class="mb-0.5 truncate text-sm font-medium text-gray-800 dark:text-white/90">
                         {{ $row['sales_name'] }}
+                    </h4>
+
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ $fmtNum($row['transactions']) }} transaksi
+                        •
+                        {{ $fmtNum($row['unit_today']) }} unit hari ini
                     </p>
-                    <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                        <div class="h-full rounded-full" style="width: {{ $pct }}%; background: #465fff;"></div>
-                    </div>
                 </div>
+
             </div>
 
-            {{-- Unit hari ini --}}
-            <div class="col-span-2 text-center">
-                <span class="text-sm font-medium text-gray-800 dark:text-white/90">
-                    {{ $fmtNum($row['unit_today']) }}
-                </span>
-            </div>
+            {{-- Right --}}
+            <div class="flex items-center justify-end gap-3 text-right">
 
-            {{-- Unit bulan ini --}}
-            <div class="col-span-2 text-center">
-                <span class="text-sm font-semibold text-gray-800 dark:text-white/90">
-                    {{ $fmtNum($row['unit_current_month']) }}
-                </span>
-            </div>
+                <div>
+                    <p class="mb-0.5 text-sm font-semibold text-success-600">
+                        {{ $fmtNum($row['unit_current_month']) }} Unit
+                    </p>
 
-            {{-- Revenue --}}
-            <div class="col-span-3 text-right">
-                <span class="text-sm font-semibold text-gray-800 dark:text-white/90">
-                    {{ $fmtRp($row['amount_current_month']) }}
-                </span>
-                <p class="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                    {{ $fmtNum($row['transactions']) }} trx
-                </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {{ $fmtRp($row['amount_current_month']) }}
+                    </p>
+                </div>
+
             </div>
 
         </div>
-        @empty
-        <div class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-            Belum ada data ranking bulan ini.
-        </div>
-        @endforelse
+
     </div>
+
+    @empty
+    <div class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+        Belum ada data ranking bulan ini.
+    </div>
+    @endforelse
+</div>
 
     {{-- View more / less button --}}
     @if($total > 10)
     <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
-        <button @click="showAll = !showAll"
-            class="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2
-                   text-xs font-medium text-gray-500 transition hover:bg-gray-50
-                   dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800">
-            <span x-text="showAll ? 'Sembunyikan' : 'Lihat semua {{ $total }} sales'"></span>
-            <svg x-bind:class="showAll ? 'rotate-180' : ''"
-                 class="transition-transform duration-200"
-                 width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"/>
-            </svg>
-        </button>
+       @if($total > 10)
+<button
+    @click="showAll = !showAll"
+    class="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg
+           border border-gray-200 px-4 py-3 text-sm font-medium
+           text-gray-700 shadow-xs transition hover:bg-gray-100
+           dark:border-gray-700 dark:bg-gray-800
+           dark:text-gray-400 dark:hover:bg-gray-900">
+
+    <span x-text="showAll ? 'Sembunyikan Ranking' : 'Lihat Semua {{ $total }} Sales'"></span>
+
+    <svg x-bind:class="showAll ? 'rotate-180' : ''"
+         class="transition-transform duration-200"
+         width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+    </svg>
+
+</button>
+@endif
     </div>
     @endif
 

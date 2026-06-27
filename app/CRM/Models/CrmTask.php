@@ -2,6 +2,7 @@
 
 namespace App\CRM\Models;
 
+use App\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,59 +24,56 @@ class CrmTask extends Model
         'priority',
         'due_at',
         'reminder_at',
+        'reminder_sent_at',
         'completed_at',
-        'result',
+        'result_id',
     ];
 
     protected $casts = [
-        'due_at' => 'datetime',
-        'reminder_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'due_at'           => 'datetime',
+        'reminder_at'      => 'datetime',
+        'reminder_sent_at' => 'datetime',
+        'completed_at'     => 'datetime',
     ];
 
-    /**
-     * Lead owner.
-     */
+    // -------------------------------------------------------------------------
+    // RELATIONS
+    // -------------------------------------------------------------------------
+
     public function lead(): BelongsTo
     {
         return $this->belongsTo(CrmLead::class, 'lead_id');
     }
 
-    /**
-     * Assigned user.
-     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /**
-     * User who created the task.
-     */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * Scope pending tasks.
-     */
+    public function result(): BelongsTo
+    {
+        return $this->belongsTo(CrmResult::class, 'result_id');
+    }
+
+    // -------------------------------------------------------------------------
+    // SCOPES
+    // -------------------------------------------------------------------------
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
     }
 
-    /**
-     * Scope completed tasks.
-     */
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
     }
 
-    /**
-     * Scope overdue tasks.
-     */
     public function scopeOverdue($query)
     {
         return $query
@@ -84,41 +82,10 @@ class CrmTask extends Model
             ->where('due_at', '<', now());
     }
 
-    /**
-     * Mark task as completed.
-     */
-    public function markAsCompleted(?string $result = null): void
-    {
-        $this->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'result' => $result,
-        ]);
-    }
+    // -------------------------------------------------------------------------
+    // ACCESSORS
+    // -------------------------------------------------------------------------
 
-    /**
-     * Mark task as cancelled.
-     */
-    public function markAsCancelled(): void
-    {
-        $this->update([
-            'status' => 'cancelled',
-        ]);
-    }
-
-    /**
-     * Start task.
-     */
-    public function markAsInProgress(): void
-    {
-        $this->update([
-            'status' => 'in_progress',
-        ]);
-    }
-
-    /**
-     * Check if task is overdue.
-     */
     public function getIsOverdueAttribute(): bool
     {
         return in_array($this->status, ['pending', 'in_progress'])
@@ -126,9 +93,6 @@ class CrmTask extends Model
             && $this->due_at->isPast();
     }
 
-    /**
-     * Check if task is completed.
-     */
     public function getIsCompletedAttribute(): bool
     {
         return $this->status === 'completed';

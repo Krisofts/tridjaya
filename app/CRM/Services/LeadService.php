@@ -2,347 +2,218 @@
 
 namespace App\CRM\Services;
 
-use App\CRM\Filters\LeadFilter;
-use App\CRM\Models\CrmLead;
-use App\CRM\Models\CrmLeadSource;
-use App\CRM\Models\CrmPipeline;
-use App\CRM\Models\CrmPipelineStage;
 use App\CRM\Events\LeadCreated;
 use App\CRM\Events\LeadStageChanged;
-use App\Models\Branch;
+use App\CRM\Filters\LeadFilter;
+use App\CRM\Models\CrmLead;
+use App\CRM\Models\CrmPipelineStage;
+use App\CRM\Services\LeadStageService;
 use App\Services\RegionService;
-use App\User\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class LeadService
 {
     public function __construct(
-        protected LeadFilter $filter,
-        protected RegionService $region
+        protected LeadFilter      $filter,
+        protected RegionService   $region,
+        protected LeadStageService $stageService,
     ) {}
 
-    /*
-    |--------------------------------------------------------------------------
-    | PAGINATION + FILTER
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // QUERY / PAGINATION
+    // -------------------------------------------------------------------------
+
     public function getPaginated(
         ?string $search = null,
         ?int $sourceId = null,
         ?int $pipelineId = null,
         ?string $temperature = null,
         ?int $assignedTo = null,
-        int $perPage = 15
+        int $perPage = 15,
     ): LengthAwarePaginator {
-
         $query = CrmLead::query()->with([
             'source',
             'pipeline',
             'stage',
+            'interest',
             'assignee',
             'creator',
             'branch',
         ]);
 
         $query = $this->filter->apply($query, [
-            'search' => $search,
-            'source_id' => $sourceId,
+            'search'      => $search,
+            'source_id'   => $sourceId,
             'pipeline_id' => $pipelineId,
             'temperature' => $temperature,
-            'assigned_to' => $assignedTo, // 👤 ADD THIS
+            'assigned_to' => $assignedTo,
         ]);
 
-        return $query->latest()
-        ->paginate($perPage)
-        ->withQueryString();
+        return $query->latest()->paginate($perPage)->withQueryString();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DETAIL
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // FIND
+    // -------------------------------------------------------------------------
+
     public function find(int $id): CrmLead
     {
         return CrmLead::query()
-        ->with([
-            'source',
-            'pipeline',
-            'stage',
-            'activities.user',
-            'assignee',
-            'creator',
-            'branch',
-        ])
-        ->findOrFail($id);
+            ->with([
+                'source',
+                'pipeline',
+                'stage',
+                'activities.user',
+                'assignee',
+                'creator',
+                'branch',
+            ])
+            ->findOrFail($id);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CREATE
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // CREATE
+    // -------------------------------------------------------------------------
+
     public function create(array $data): CrmLead
     {
-        $data['lead_code'] = $this->generateLeadCode();
+        return DB::transaction(function () use ($data) {
+            $data['lead_code'] = $this->generateLeadCode();
 
-        $firstStage = CrmPipelineStage::query()
-        ->where('pipeline_id', $data['pipeline_id'])
-        ->orderBy('sort_order')
-        ->orderBy('id')
-        ->first();
+            $firstStage = CrmPipelineStage::query()
+                ->where('pipeline_id', $data['pipeline_id'])
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->first();
 
-        if (! $firstStage) {
-            throw new \Exception('No pipeline stage found for pipeline ID: ' . $data['pipeline_id']);
-        }
+            if (! $firstStage) {
+                throw new \RuntimeException(
+                    "Pipeline #{$data['pipeline_id']} belum memiliki stage."
+                );
+            }
 
-        $data['pipeline_stage_id'] = $firstStage->id;
+            $data['pipeline_stage_id'] = $firstStage->id;
 
-        $lead = CrmLead::create($data);
+            // Otomatis assign ke user yang sedang login
+            $data['assigned_to'] = auth()->id();
 
-        event(new LeadCreated($lead));
+            // Otomatis simpan creator
+            $data['created_by'] = auth()->id();
 
-        return $lead;
+            $data = array_merge($data, $this->region->resolve(
+                $data['province_code'] ?? null,
+                $data['city_code'] ?? null,
+                $data['district_code'] ?? null,
+            ));
+
+            $lead = CrmLead::create($data);
+
+            event(new LeadCreated($lead));
+
+            return $lead;
+        });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | UPDATE
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // UPDATE
+    // -------------------------------------------------------------------------
+
     public function update(CrmLead $lead, array $data): CrmLead
     {
-        $stageChanged = false;
+        return DB::transaction(function () use ($lead, $data) {
+            $oldStageId   = $lead->pipeline_stage_id;
+            $stageChanged = false;
 
-        if (
-            isset($data['pipeline_id']) &&
-            $data['pipeline_id'] != $lead->pipeline_id
-        ) {
-            $defaultStage = CrmPipelineStage::query()
-            ->where('pipeline_id', $data['pipeline_id'])
-            ->where('is_default', true)
-            ->firstOrFail();
+            if (
+                isset($data['pipeline_id']) &&
+                (int) $data['pipeline_id'] !== (int) $lead->pipeline_id
+            ) {
+                $defaultStage = CrmPipelineStage::query()
+                    ->where('pipeline_id', $data['pipeline_id'])
+                    ->where('is_default', true)
+                    ->first();
 
-            $data['pipeline_stage_id'] = $defaultStage->id;
+                if (! $defaultStage) {
+                    throw new \RuntimeException(
+                        "Pipeline #{$data['pipeline_id']} tidak memiliki stage default."
+                    );
+                }
 
-            $stageChanged = true;
-        }
+                $data['pipeline_stage_id'] = $defaultStage->id;
+                $stageChanged = true;
+            }
 
-        $lead->update($data);
-
-        $lead = $lead->fresh([
-            'source',
-            'pipeline',
-            'stage',
-            'assignee',
-            'creator',
-            'branch',
-        ]);
-
-        if ($stageChanged) {
-            event(new LeadStageChanged(
-                lead: $lead,
-                oldStageId: null,
-                newStageId: $lead->pipeline_stage_id
+            // Resolve nama wilayah — pakai nilai baru kalau ada, fallback ke nilai lama
+            $data = array_merge($data, $this->region->resolve(
+                $data['province_code'] ?? $lead->province_code,
+                $data['city_code']     ?? $lead->city_code,
+                $data['district_code'] ?? $lead->district_code,
             ));
-        }
 
-        return $lead;
+            $lead->update($data);
+
+            $lead = $lead->fresh([
+                'source',
+                'pipeline',
+                'stage',
+                'assignee',
+                'creator',
+                'branch',
+            ]);
+
+            if ($stageChanged) {
+                event(new LeadStageChanged(
+                    lead: $lead,
+                    oldStageId: $oldStageId,
+                    newStageId: $lead->pipeline_stage_id,
+                ));
+            }
+
+            return $lead;
+        });
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CHANGE STAGE
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // CHANGE STAGE
+    // -------------------------------------------------------------------------
+
     public function changeStage(CrmLead $lead, int $stageId): CrmLead
     {
-        $stage = CrmPipelineStage::query()->findOrFail($stageId);
-
-        $oldStageId = $lead->pipeline_stage_id;
-
-        if ($oldStageId === $stage->id) {
-            return $lead;
-        }
-
-        $lead->update([
-            'pipeline_id' => $stage->pipeline_id,
-            'pipeline_stage_id' => $stage->id,
-        ]);
-
-        $lead = $lead->fresh(['pipeline', 'stage']);
-
-        event(new LeadStageChanged(
-            lead: $lead,
-            oldStageId: $oldStageId,
-            newStageId: $stage->id
-        ));
-
-        return $lead;
+        return $this->stageService->changeStage($lead, $stageId);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DELETE
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // DELETE
+    // -------------------------------------------------------------------------
+
     public function delete(CrmLead $lead): bool
     {
-        return $lead->delete();
+        return $lead->delete() !== false;
     }
 
-    /*
-|--------------------------------------------------------------------------
-| FILTER DATA
-|--------------------------------------------------------------------------
-*/
-    public function getFilterData(): array
+    // -------------------------------------------------------------------------
+    // PRIVATE
+    // -------------------------------------------------------------------------
+
+    /**
+     * Generate lead code yang unik per tahun.
+     * Format : LD-2026-00001
+     * Harus dipanggil di dalam DB::transaction() agar lockForUpdate() efektif.
+     */
+    private function generateLeadCode(): string
     {
-        return [
-            'sources' => CrmLeadSource::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($item) => [
-                'value' => $item->id,
-                'label' => $item->name,
-            ]),
+        $year = now()->format('Y');
 
-            'pipelines' => CrmPipeline::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($item) => [
-                'value' => $item->id,
-                'label' => $item->name,
-            ]),
+        $lastCode = CrmLead::query()
+            ->where('lead_code', 'like', "LD-{$year}-%")
+            ->lockForUpdate()
+            ->max('lead_code');
 
-            // 👤 ASSIGNEE (USER FILTER)
-            'assignees' => User::query()
-            ->orderBy('name')
-            ->get()
-            ->map(fn ($user) => [
-                'value' => $user->id,
-                'label' => $user->name,
-            ]),
+        $nextNumber = $lastCode
+            ? (int) substr($lastCode, strrpos($lastCode, '-') + 1) + 1
+            : 1;
 
-            // 🔥 TEMPERATURE FILTER
-            'temperatures' => collect([
-                CrmPipelineStage::TEMP_COLD,
-                CrmPipelineStage::TEMP_WARM,
-                CrmPipelineStage::TEMP_HOT,
-                CrmPipelineStage::TEMP_CUSTOMER,
-                CrmPipelineStage::TEMP_LOST,
-            ])->map(fn ($temp) => [
-                'value' => $temp,
-                'label' => match ($temp) {
-                    CrmPipelineStage::TEMP_COLD => 'Cold',
-                    CrmPipelineStage::TEMP_WARM => 'Warm',
-                    CrmPipelineStage::TEMP_HOT => 'Hot',
-                    CrmPipelineStage::TEMP_CUSTOMER => 'Customer',
-                    CrmPipelineStage::TEMP_LOST => 'Lost',
-                    default => ucfirst($temp),
-                    },
-                ]),
-            ];
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| CREATE DATA
-|--------------------------------------------------------------------------
-*/
-        public function getCreateData(): array
-        {
-            return [
-                'sources' => CrmLeadSource::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-                'pipelines' => CrmPipeline::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-                'users' => User::query()
-                ->orderBy('name')
-                ->get(),
-
-                'branches' => Branch::query()
-                ->orderBy('name')
-                ->get(),
-
-                'provinces' => $this->region->provinces(),
-
-                'cities' => [],
-
-                'districts' => [],
-            ];
-        }
-
-        /*
-|--------------------------------------------------------------------------
-| UPDATE DATA
-|--------------------------------------------------------------------------
-*/
-        public function getUpdateData(CrmLead $lead): array
-        {
-            $provinceCode = $lead->province_code;
-            $cityCode = $lead->city_code;
-
-            return [
-                'lead' => $lead->load([
-                    'source',
-                    'pipeline',
-                    'stage',
-                    'assignee',
-                    'creator',
-                    'branch',
-                ]),
-
-                'sources' => CrmLeadSource::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-                'pipelines' => CrmPipeline::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-                'users' => User::query()
-                ->orderBy('name')
-                ->get(),
-
-                'branches' => Branch::query()
-                ->orderBy('name')
-                ->get(),
-
-                'provinces' => $this->region->provinces(),
-
-                'cities' => $provinceCode
-                ? $this->region->regencies($provinceCode)
-                : [],
-
-                'districts' => $cityCode
-                ? $this->region->districts($cityCode)
-                : [],
-            ];
-        }
-        /*
-    |--------------------------------------------------------------------------
-    | LEAD CODE
-    |--------------------------------------------------------------------------
-    */
-        private function generateLeadCode(): string
-        {
-            $year = now()->format('Y');
-
-            $lastLead = CrmLead::query()->latest('id')->first();
-
-            $nextNumber = $lastLead ? $lastLead->id + 1 : 1;
-
-            return sprintf('LD-%s-%05d', $year, $nextNumber);
-        }
+        return sprintf('LD-%s-%05d', $year, $nextNumber);
     }
+}

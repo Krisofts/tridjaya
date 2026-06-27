@@ -3,136 +3,124 @@
 namespace App\CRM\Services;
 
 use App\CRM\Enums\CrmTaskResult;
+use App\CRM\Models\CrmLead;
 use App\CRM\Models\CrmTask;
 
 class AutoTaskService
 {
     public function __construct(
-        protected TaskService $taskService
+        protected TaskService $tasks,
     ) {}
 
-    /**
-     * MAIN ENTRY POINT
-     */
-    public function handle(string $event, $lead, ?string $result = null, ?string $stage = null): void
+    // -------------------------------------------------------------------------
+    // ENTRY POINTS (dipanggil dari Event Listeners)
+    // -------------------------------------------------------------------------
+
+    public function onLeadCreated(CrmLead $lead): void
     {
-        match ($event) {
-
-            'lead_created' => $this->leadCreated($lead),
-
-            'task_completed' => $this->taskCompleted($lead, $result),
-
-            'stage_changed' => $this->stageChanged($lead, $stage),
-
-            default => null,
-        };
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | LEAD CREATED
-    |--------------------------------------------------------------------------
-    */
-    private function leadCreated($lead): void
-    {
-        $this->taskService->create([
-            'lead_id' => $lead->id,
+        $this->createTask($lead->id, [
             'user_id' => $lead->assigned_to,
-
             'title'   => 'Follow Up Lead Baru',
             'type'    => 'follow_up',
-
             'due_at'  => now()->addMinutes(15),
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | TASK COMPLETED FLOW
-    |--------------------------------------------------------------------------
-    */
-    private function taskCompleted($task, ?string $result): void
+    public function onTaskCompleted(CrmTask $task, ?int $resultId): void
     {
-        if (!$result) return;
+        if (! $resultId) return;
 
-        $leadId = $task->lead_id;
+        $result = \App\CRM\Models\CrmResult::find($resultId);
 
-        match ($result) {
+        if (! $result) return;
 
-            CrmTaskResult::NO_RESPONSE->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Follow Up Ulang (H+1)',
-                'due_at'  => now()->addDay(),
-            ]),
-
-            CrmTaskResult::INTERESTED->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Kirim Detail Produk',
-                'due_at'  => now()->addHours(2),
-            ]),
-
-            CrmTaskResult::SUBMITTED->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Verifikasi Data Customer',
-                'due_at'  => now()->addHour(),
-            ]),
-
-            CrmTaskResult::SURVEY->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Follow Up Hasil Survey',
-                'due_at'  => now()->addDay(),
-            ]),
-
-            CrmTaskResult::DP->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Siapkan Delivery / Instalasi',
-                'due_at'  => now(),
-            ]),
-
-            CrmTaskResult::DEAL->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'Follow Up Closing Admin',
-                'due_at'  => now()->addHours(3),
-            ]),
-
-            CrmTaskResult::SUCCESS->value => $this->taskService->create([
-                'lead_id' => $leadId,
-                'title'   => 'After Sales Follow Up',
-                'due_at'  => now()->addDays(7),
-            ]),
-
-            default => null,
-        };
+        $this->handleTaskResult($task->lead_id, $result->slug ?? $result->name);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | STAGE CHANGED FLOW
-    |--------------------------------------------------------------------------
-    */
-    private function stageChanged($lead, ?string $stage): void
+    public function onStageChanged(CrmLead $lead, string $stageName): void
     {
-        match ($stage) {
+        $this->handleStageFlow($lead, $stageName);
+    }
 
-            'Contacted' => $this->taskService->create([
-                'lead_id' => $lead->id,
-                'title'   => 'Follow Up Kontak Pertama',
-                'due_at'  => now()->addHours(2),
-            ]),
+    // -------------------------------------------------------------------------
+    // TASK RESULT FLOW
+    // -------------------------------------------------------------------------
 
-            'Prospek' => $this->taskService->create([
-                'lead_id' => $lead->id,
-                'title'   => 'Maintain Prospek Aktif',
-                'due_at'  => now()->addDay(),
-            ]),
-
-            'Won' => $this->taskService->create([
-                'lead_id' => $lead->id,
-                'title'   => 'Serah Terima Customer',
-                'due_at'  => now(),
-            ]),
-
+    private function handleTaskResult(int $leadId, string $result): void
+    {
+        $config = match ($result) {
+            CrmTaskResult::NO_RESPONSE->value => [
+                'title'  => 'Follow Up Ulang (H+1)',
+                'due_at' => now()->addDay(),
+            ],
+            CrmTaskResult::INTERESTED->value => [
+                'title'  => 'Kirim Detail Produk',
+                'due_at' => now()->addHours(2),
+            ],
+            CrmTaskResult::SUBMITTED->value => [
+                'title'  => 'Verifikasi Data Customer',
+                'due_at' => now()->addHour(),
+            ],
+            CrmTaskResult::SURVEY->value => [
+                'title'  => 'Follow Up Hasil Survey',
+                'due_at' => now()->addDay(),
+            ],
+            CrmTaskResult::DP->value => [
+                'title'  => 'Siapkan Delivery / Instalasi',
+                'due_at' => now(),
+            ],
+            CrmTaskResult::DEAL->value => [
+                'title'  => 'Follow Up Closing Admin',
+                'due_at' => now()->addHours(3),
+            ],
+            CrmTaskResult::SUCCESS->value => [
+                'title'  => 'After Sales Follow Up',
+                'due_at' => now()->addDays(7),
+            ],
             default => null,
         };
+
+        if ($config) {
+            $this->createTask($leadId, $config);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // STAGE CHANGED FLOW
+    // -------------------------------------------------------------------------
+
+    private function handleStageFlow(CrmLead $lead, string $stageName): void
+    {
+        $config = match ($stageName) {
+            'Contacted' => [
+                'title'  => 'Follow Up Kontak Pertama',
+                'due_at' => now()->addHours(2),
+            ],
+            'Prospek' => [
+                'title'  => 'Maintain Prospek Aktif',
+                'due_at' => now()->addDay(),
+            ],
+            'Won' => [
+                'title'  => 'Serah Terima Customer',
+                'due_at' => now(),
+            ],
+            default => null,
+        };
+
+        if ($config) {
+            $this->createTask($lead->id, $config);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // PRIVATE
+    // -------------------------------------------------------------------------
+
+    private function createTask(int $leadId, array $data): CrmTask
+    {
+        return $this->tasks->create([
+            'lead_id' => $leadId,
+            ...$data,
+        ]);
     }
 }

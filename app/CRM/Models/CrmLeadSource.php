@@ -14,6 +14,23 @@ class CrmLeadSource extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    // -------------------------------------------------------------------------
+    // SCOPES
+    // -------------------------------------------------------------------------
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // -------------------------------------------------------------------------
+    // RELATIONS
+    // -------------------------------------------------------------------------
+
     public function leads(): HasMany
     {
         return $this->hasMany(CrmLead::class, 'lead_source_id');

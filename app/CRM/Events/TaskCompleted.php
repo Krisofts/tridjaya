@@ -8,8 +8,6 @@ class TaskCompleted
 {
     public function __construct(
         public CrmTask $task,
-
-        // 👉 ganti string jadi ID result dari tabel crm_results
-        public ?int $result_id = null
+        public ?int    $resultId = null,
     ) {}
 }

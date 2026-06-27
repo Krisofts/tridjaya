@@ -14,106 +14,38 @@ class UpdateLeadRequest extends FormRequest
     public function rules(): array
     {
         return [
-            /*
-            |--------------------------------------------------------------------------
-            | LEAD CORE
-            |--------------------------------------------------------------------------
-            */
-            'lead_source_id' => [
-                'nullable',
-                'integer',
-                'exists:crm_lead_sources,id',
-            ],
+            // Core
+            'name'           => ['required', 'string', 'max:255'],
+            'phone'          => ['nullable', 'string', 'max:30'],
+            'email'          => ['nullable', 'email', 'max:255'],
+            'address'        => ['nullable', 'string'],
+            'interest_id'    => ['nullable', 'integer', 'exists:crm_interests,id'],
+            'notes'          => ['nullable', 'string'],
 
-            'pipeline_id' => [
-                'required',
-                'integer',
-                'exists:crm_pipelines,id',
-            ],
+            // Pipeline
+            'pipeline_id'    => ['required', 'integer', 'exists:crm_pipelines,id'],
+            'lead_source_id' => ['nullable', 'integer', 'exists:crm_lead_sources,id'],
 
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
+            // Region
+            'province_code'  => ['nullable', 'string', 'max:20'],
+            'city_code'      => ['nullable', 'string', 'max:20'],
+            'district_code'  => ['nullable', 'string', 'max:20'],
 
-            'phone' => [
-                'nullable',
-                'string',
-                'max:30',
-            ],
+            // Relations
+            'assigned_to'    => ['nullable', 'integer', 'exists:users,id'],
+            'branch_id'      => ['nullable', 'integer', 'exists:branches,id'],
+        ];
+    }
 
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-            ],
-
-            'address' => [
-                'nullable',
-                'string',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | REGION (CODE ONLY)
-            |--------------------------------------------------------------------------
-            */
-            'province_code' => [
-                'nullable',
-                'string',
-                'max:20',
-            ],
-
-            'city_code' => [
-                'nullable',
-                'string',
-                'max:20',
-            ],
-
-            'district_code' => [
-                'nullable',
-                'string',
-                'max:20',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | SALES INFO
-            |--------------------------------------------------------------------------
-            */
-            'sale_type' => [
-                'nullable',
-                'in:cash,credit',
-            ],
-
-            'interest' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'notes' => [
-                'nullable',
-                'string',
-            ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | RELATIONS
-            |--------------------------------------------------------------------------
-            */
-            'assigned_to' => [
-                'nullable',
-                'integer',
-                'exists:users,id',
-            ],
-
-            'branch_id' => [
-                'nullable',
-                'integer',
-                'exists:branches,id',
-            ],
+    public function messages(): array
+    {
+        return [
+            'name.required'        => 'Nama lengkap harus diisi.',
+            'email.email'          => 'Format email tidak valid.',
+            'pipeline_id.required' => 'Pipeline harus dipilih.',
+            'pipeline_id.exists'   => 'Pipeline tidak ditemukan.',
+            'assigned_to.exists'   => 'Sales yang dipilih tidak ditemukan.',
+            'branch_id.exists'     => 'Cabang tidak ditemukan.',
         ];
     }
 }

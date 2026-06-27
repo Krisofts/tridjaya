@@ -20,25 +20,27 @@ class CrmPipeline extends Model
         'is_active' => 'boolean',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATIONS
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // SCOPES
+    // -------------------------------------------------------------------------
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // -------------------------------------------------------------------------
+    // RELATIONS
+    // -------------------------------------------------------------------------
 
     public function stages(): HasMany
     {
-        return $this->hasMany(
-            CrmPipelineStage::class,
-            'pipeline_id'
-        )->orderBy('sort_order');
+        return $this->hasMany(CrmPipelineStage::class, 'pipeline_id')
+            ->orderBy('sort_order');
     }
 
     public function leads(): HasMany
     {
-        return $this->hasMany(
-            CrmLead::class,
-            'pipeline_id'
-        );
+        return $this->hasMany(CrmLead::class, 'pipeline_id');
     }
 }

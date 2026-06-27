@@ -2,14 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\CRM\Models\CrmLeadSource;
+use Illuminate\Database\Seeder;
 
 class CrmLeadSourceSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $sources = [
@@ -18,15 +15,19 @@ class CrmLeadSourceSeeder extends Seeder
             'Instagram',
             'TikTok',
             'WhatsApp',
+            'Referral',
             'Ads',
             'Website',
             'Event',
         ];
 
-        foreach ($sources as $source) {
-            CrmLeadSource::firstOrCreate([
-                'name' => $source,
-            ]);
+        foreach ($sources as $index => $name) {
+            CrmLeadSource::updateOrCreate(
+                ['name' => $name],
+                ['is_active' => true, 'sort_order' => $index + 1],
+            );
         }
+
+        $this->command->info('✓ Lead sources berhasil di-seed.');
     }
 }

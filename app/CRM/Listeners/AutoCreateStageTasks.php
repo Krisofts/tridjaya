@@ -8,45 +8,32 @@ use App\CRM\Services\TaskService;
 class AutoCreateStageTasks
 {
     public function __construct(
-        protected TaskService $taskService
+        protected TaskService $tasks,
     ) {}
 
     public function handle(LeadStageChanged $event): void
     {
-        $lead = $event->lead;
+        $lead  = $event->lead;
+        $stage = $lead->stage()->with('tasks')->first();
 
-        $stage = $lead->stage()
-            ->with('tasks')
-            ->first();
-
-        if (! $stage) {
+        if (! $stage || $stage->tasks->isEmpty()) {
             return;
         }
 
-        foreach ($stage->tasks as $rule) {
+        foreach ($stage->tasks as $template) {
+            $dueMinutes      = (int) $template->due_after_minutes;
+            $reminderMinutes = max($dueMinutes - (int) $template->reminder_before_minutes, 0);
 
-            $this->taskService->create([
-                'lead_id' => $lead->id,
-                'user_id' => $lead->assigned_to,
-                'created_by' => $lead->created_by,
-
-                'title' => $rule->title,
-                'description' => $rule->description,
-
-                'type' => $rule->type,
-                'priority' => $rule->priority,
-
-                'due_at' => now()->addMinutes(
-                    $rule->due_after_minutes
-                ),
-
-                'reminder_at' => now()->addMinutes(
-                    max(
-                        $rule->due_after_minutes -
-                        $rule->reminder_before_minutes,
-                        0
-                    )
-                ),
+            $this->tasks->create([
+                'lead_id'     => $lead->id,
+                'user_id'     => $lead->assigned_to,
+                'created_by'  => $lead->created_by,
+                'title'       => $template->title,
+                'description' => $template->description,
+                'type'        => $template->type,
+                'priority'    => $template->priority,
+                'due_at'      => now()->addMinutes($dueMinutes),
+                'reminder_at' => now()->addMinutes($reminderMinutes),
             ]);
         }
     }

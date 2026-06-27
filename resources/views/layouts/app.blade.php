@@ -153,8 +153,10 @@
 
     </div>
 
-</body>
 
+
+
+</body>
 @stack('scripts')
 
 </html>

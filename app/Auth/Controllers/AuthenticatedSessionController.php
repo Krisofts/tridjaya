@@ -2,6 +2,7 @@
 
 namespace App\Auth\Controllers;
 
+use App\Auth\Services\AuthorizationService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
@@ -22,13 +23,21 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
+    public function store(
+        LoginRequest $request,
+        AuthorizationService $authorization
+    ): RedirectResponse
     {
         $request->authenticate();
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard.sales.index', absolute: false));
+        return redirect()->intended(
+            route(
+                $authorization->redirectRoute($request->user()),
+                absolute: false
+            )
+        );
     }
 
     /**

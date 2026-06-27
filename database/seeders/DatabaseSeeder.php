@@ -18,11 +18,15 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             BranchSeeder::class,
+
+            // Wilayah Indonesia
+            WilayahSeeder::class,
+
             CrmLeadSourceSeeder::class,
             CrmPipelineSeeder::class,
             CrmPipelineStageSeeder::class,
 
-            // 👉 ADD RESULT FLOW SYSTEM
+            // Result Flow System
             CrmResultSeeder::class,
             CrmResultStageMappingSeeder::class,
 

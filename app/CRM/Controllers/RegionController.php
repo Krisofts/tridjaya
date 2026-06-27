@@ -4,46 +4,32 @@ namespace App\CRM\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Services\RegionService;
+use Illuminate\Http\JsonResponse;
 
 class RegionController extends Controller
 {
     public function __construct(
-        protected RegionService $regionService
+        protected RegionService $region, 
     ) {}
 
-    /*
-    |--------------------------------------------------------------------------
-    | REGENCIES (KOTA / KABUPATEN)
-    |--------------------------------------------------------------------------
-    */
-    public function regencies(string $provinceCode)
+    public function cities(string $provinceCode): JsonResponse
     {
         return response()->json(
-            $this->regionService->regencies($provinceCode) ?? []
+            $this->region->regencies($provinceCode)
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DISTRICTS (KECAMATAN)
-    |--------------------------------------------------------------------------
-    */
-    public function districts(string $regencyCode)
+    public function districts(string $cityCode): JsonResponse
     {
         return response()->json(
-            $this->regionService->districts($regencyCode) ?? []
+            $this->region->districts($cityCode)
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | VILLAGES (OPTIONAL)
-    |--------------------------------------------------------------------------
-    */
-    public function villages(string $districtCode)
+    public function villages(string $districtCode): JsonResponse
     {
         return response()->json(
-            $this->regionService->villages($districtCode) ?? []
+            $this->region->villages($districtCode)
         );
     }
 }

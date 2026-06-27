@@ -1,114 +1,102 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\CRM\Controllers\LeadController;
 use App\CRM\Controllers\LeadDetailController;
+use App\CRM\Controllers\MyLeadController;
+use App\CRM\Controllers\NotificationController;
 use App\CRM\Controllers\TaskController;
-use App\Services\RegionService;
+use App\CRM\Controllers\RegionController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'canAccess:crm.access'])
-->prefix('crm')
-->name('crm.')
-->group(function () {
-    /*
-        |--------------------------------------------------------------------------
-        | TASK
-        |--------------------------------------------------------------------------
+    ->prefix('crm')
+    ->name('crm.')
+    ->group(function () {
+
+        /*
+        |----------------------------------------------------------------------
+        | TRANSACTIONS
+        |----------------------------------------------------------------------
         */
 
-    // create task (dari lead detail modal)
-    Route::post('/leads/tasks', [LeadDetailController::class, 'storeTask'])
-    ->name('leads.tasks.store');
+        Route::post('leads/{lead}/transactions',          [\App\CRM\Controllers\TransactionController::class, 'store'])->name('transactions.store');
+        Route::patch('transactions/{transaction}/status', [\App\CRM\Controllers\TransactionController::class, 'updateStatus'])->name('transactions.update-status');
+        Route::delete('transactions/{transaction}',       [\App\CRM\Controllers\TransactionController::class, 'destroy'])->name('transactions.destroy');
 
-    // start task
-    Route::patch('/tasks/{task}/start', [TaskController::class, 'start'])
-    ->name('tasks.start');
-
-    // complete task
-    Route::patch('/tasks/{task}/complete', [TaskController::class, 'complete'])
-    ->name('tasks.complete');
-
-    // cancel task (optional tapi bagus ada)
-    Route::patch('/tasks/{task}/cancel', [TaskController::class, 'cancel'])
-    ->name('tasks.cancel');
-    
-    
-    
-
-/*
-|--------------------------------------------------------------------------
-| REGION (AJAX DROPDOWN)
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/regions/cities/{provinceCode}', function (
-    string $provinceCode,
-    RegionService $region
-) {
-    return response()->json(
-        $region->regencies($provinceCode)
-    );
-})->name('regions.cities');
-
-Route::get('/regions/districts/{cityCode}', function (
-    string $cityCode,
-    RegionService $region
-) {
-    return response()->json(
-        $region->districts($cityCode)
-    );
-})->name('regions.districts');
-
-    /*
-        |--------------------------------------------------------------------------
-        | LEADS (CRUD)
-        |--------------------------------------------------------------------------
+        /*
+        |----------------------------------------------------------------------
+        | LAPORAN
+        |----------------------------------------------------------------------
         */
 
-    Route::get('/leads', [LeadController::class, 'index'])
-    ->name('leads.index');
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('leads',        [\App\CRM\Controllers\LeadReportController::class, 'index'])->name('leads');
+            Route::get('leads/export', [\App\CRM\Controllers\LeadReportController::class, 'export'])->name('leads.export');
+        });
 
-    Route::get('/leads/create', [LeadController::class, 'create'])
-    ->name('leads.create');
-
-    Route::post('/leads', [LeadController::class, 'store'])
-    ->name('leads.store');
-
-    Route::get('/leads/{lead}/edit', [LeadController::class, 'edit'])
-    ->name('leads.edit');
-
-    Route::put('/leads/{lead}', [LeadController::class, 'update'])
-    ->name('leads.update');
-
-    Route::delete('/leads/{lead}', [LeadController::class, 'destroy'])
-    ->name('leads.destroy');
-
-    Route::post('/leads/{lead}/restore', [LeadController::class, 'restore'])
-    ->name('leads.restore');
-
-    Route::delete('/leads/{lead}/force-delete', [LeadController::class, 'forceDelete'])
-    ->name('leads.forceDelete');
-
-    /*
-        |--------------------------------------------------------------------------
-        | LEAD DETAIL
-        |--------------------------------------------------------------------------
+        /*
+        |----------------------------------------------------------------------
+        | OPERASIONAL (per user login)
+        |----------------------------------------------------------------------
         */
 
-    Route::get('/leads/{id}', [LeadDetailController::class, 'show'])
-    ->name('leads.show');
+        Route::get('my-leads',          [MyLeadController::class, 'index'])->name('my-leads.index');
+        Route::get('my-leads/{lead}',   [MyLeadController::class, 'show'])->name('my-leads.show');
+        Route::get('my-tasks',          [MyLeadController::class, 'tasks'])->name('my-tasks.index');
 
-
-    Route::post('/leads/{lead}/change-stage', [LeadDetailController::class, 'changeStage'])
-    ->name('leads.change-stage');
-
-    /*
-        |--------------------------------------------------------------------------
-        | WHATSAPP ACTION
-        |--------------------------------------------------------------------------
+        /*
+        |----------------------------------------------------------------------
+        | LEADS
+        |----------------------------------------------------------------------
         */
 
-    Route::post('/leads/{lead}/whatsapp', [LeadDetailController::class, 'whatsapp'])
-    ->name('leads.whatsapp');
-});
+        Route::prefix('leads')->name('leads.')->group(function () {
+
+            Route::get('/',              [LeadController::class, 'index'])->name('index');
+            Route::get('/create',        [LeadController::class, 'create'])->name('create');
+            Route::post('/',             [LeadController::class, 'store'])->name('store');
+            Route::get('/{lead}/edit',   [LeadController::class, 'edit'])->name('edit');
+            Route::put('/{lead}',        [LeadController::class, 'update'])->name('update');
+            Route::delete('/{lead}',     [LeadController::class, 'destroy'])->name('destroy');
+            Route::post('/{lead}/restore',       [LeadController::class, 'restore'])->name('restore');
+            Route::delete('/{lead}/force-delete',[LeadController::class, 'forceDelete'])->name('forceDelete');
+
+            // Lead Detail
+            Route::get('/{lead}',               [LeadDetailController::class, 'show'])->name('show');
+            Route::post('/{lead}/change-stage', [LeadDetailController::class, 'changeStage'])->name('change-stage');
+            Route::post('/{lead}/whatsapp',     [LeadDetailController::class, 'whatsapp'])->name('whatsapp');
+
+            // Tasks (dari lead detail)
+            Route::post('/tasks',        [LeadDetailController::class, 'storeTask'])->name('tasks.store');
+
+        });
+
+        /*
+        |----------------------------------------------------------------------
+        | TASKS
+        |----------------------------------------------------------------------
+        */
+
+        Route::prefix('tasks')->name('tasks.')->group(function () {
+
+            Route::patch('/{task}/start',    [TaskController::class, 'start'])->name('start');
+            Route::patch('/{task}/complete', [TaskController::class, 'complete'])->name('complete');
+            Route::patch('/{task}/cancel',   [TaskController::class, 'cancel'])->name('cancel');
+
+        });
+
+        /*
+        |----------------------------------------------------------------------
+        | REGION (AJAX Dropdown Wilayah)
+        |----------------------------------------------------------------------
+        */
+
+        Route::prefix('regions')->name('regions.')->group(function () {
+
+            Route::get('/cities/{provinceCode}',   [RegionController::class, 'cities'])->name('cities')->where('provinceCode', '[0-9.]+');
+            Route::get('/districts/{cityCode}',    [RegionController::class, 'districts'])->name('districts')->where('cityCode', '[0-9.]+');
+            Route::get('/villages/{districtCode}', [RegionController::class, 'villages'])->name('villages')->where('districtCode', '[0-9.]+');
+
+        });
+
+    });

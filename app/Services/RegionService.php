@@ -3,156 +3,105 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 class RegionService
 {
-    private string $baseUrl;
-    private int $ttl; // cache lifetime
+    // Cache 30 hari — data wilayah sangat jarang berubah
+    private const TTL = 60 * 60 * 24 * 30;
 
-    public function __construct()
-    {
-        $this->baseUrl = config('services.region.base_url');
-        $this->ttl = 60 * 60 * 24 * 30; // 30 hari (jarang berubah)
-    }
+    // -------------------------------------------------------------------------
+    // PROVINCES
+    // -------------------------------------------------------------------------
 
-    /*
-    |--------------------------------------------------------------------------
-    | MAP RESPONSE
-    |--------------------------------------------------------------------------
-    */
-    private function map(array $data): array
-    {
-        return collect($data)
-            ->mapWithKeys(fn ($item) => [
-                $item['code'] => $item['name'],
-            ])
-            ->toArray();
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | CACHE KEY
-    |--------------------------------------------------------------------------
-    */
-    private function cacheKey(string $endpoint): string
-    {
-        return "region_api:" . md5($endpoint);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | HTTP REQUEST (CACHE FIRST + REVALIDATE READY)
-    |--------------------------------------------------------------------------
-    */
-    private function get(string $endpoint): array
-    {
-        $key = $this->cacheKey($endpoint);
-
-        return Cache::remember($key, $this->ttl, function () use ($endpoint) {
-            return Http::retry(3, 500)
-                ->timeout(10)
-                ->get("{$this->baseUrl}/{$endpoint}")
-                ->throw()
-                ->json('data') ?? [];
-        });
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | FORCE REFRESH (REVALIDATE MANUAL)
-    |--------------------------------------------------------------------------
-    */
-    public function refresh(string $endpoint): void
-    {
-        $key = $this->cacheKey($endpoint);
-
-        Cache::forget($key);
-
-        Cache::remember($key, $this->ttl, function () use ($endpoint) {
-            return Http::retry(3, 500)
-                ->timeout(10)
-                ->get("{$this->baseUrl}/{$endpoint}")
-                ->throw()
-                ->json('data') ?? [];
-        });
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROVINCES
-    |--------------------------------------------------------------------------
-    */
     public function provinces(): array
     {
-        return $this->map(
-            $this->get('provinces.json')
+        return Cache::remember('wilayah:provinces', self::TTL, fn () =>
+            DB::table('wilayah_provinsi')
+                ->orderBy('name')
+                ->pluck('name', 'code')
+                ->toArray()
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | REGENCIES (CITIES)
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // REGENCIES (KOTA / KABUPATEN)
+    // -------------------------------------------------------------------------
+
     public function regencies(string $provinceCode): array
     {
-        return $this->map(
-            $this->get("regencies/{$provinceCode}.json")
+        return Cache::remember("wilayah:regencies:{$provinceCode}", self::TTL, fn () =>
+            DB::table('wilayah_kota')
+                ->where('province_code', $provinceCode)
+                ->orderBy('name')
+                ->pluck('name', 'code')
+                ->toArray()
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | DISTRICTS
-    |--------------------------------------------------------------------------
-    */
-    public function districts(string $regencyCode): array
+    // -------------------------------------------------------------------------
+    // DISTRICTS (KECAMATAN)
+    // -------------------------------------------------------------------------
+
+    public function districts(string $cityCode): array
     {
-        return $this->map(
-            $this->get("districts/{$regencyCode}.json")
+        return Cache::remember("wilayah:districts:{$cityCode}", self::TTL, fn () =>
+            DB::table('wilayah_kecamatan')
+                ->where('city_code', $cityCode)
+                ->orderBy('name')
+                ->pluck('name', 'code')
+                ->toArray()
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | VILLAGES
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------------------------
+    // RESOLVE — ambil nama dari kode, reuse cache yang sudah ada
+    // -------------------------------------------------------------------------
+
+    public function resolve(
+        ?string $provinceCode,
+        ?string $cityCode,
+        ?string $districtCode,
+    ): array {
+        return [
+            'province_name' => $provinceCode
+                ? ($this->provinces()[$provinceCode] ?? null)
+                : null,
+
+            'city_name' => ($provinceCode && $cityCode)
+                ? ($this->regencies($provinceCode)[$cityCode] ?? null)
+                : null,
+
+            'district_name' => ($cityCode && $districtCode)
+                ? ($this->districts($cityCode)[$districtCode] ?? null)
+                : null,
+        ];
+    }
+
+    // -------------------------------------------------------------------------
+    // VILLAGES (opsional)
+    // -------------------------------------------------------------------------
+
     public function villages(string $districtCode): array
     {
-        return $this->map(
-            $this->get("villages/{$districtCode}.json")
-        );
+        return [];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RESOLVE REGION
-    |--------------------------------------------------------------------------
-    */
-    public function resolve(?string $provinceCode, ?string $cityCode, ?string $districtCode): array
+    // -------------------------------------------------------------------------
+    // FLUSH — hapus semua cache wilayah
+    // Panggil setelah re-seed: app(RegionService::class)->flush()
+    // -------------------------------------------------------------------------
+
+    public function flush(): void
     {
-        $provinceName = null;
-        $cityName = null;
-        $districtName = null;
+        Cache::forget('wilayah:provinces');
 
-        if ($provinceCode) {
-            $provinceName = $this->provinces()[$provinceCode] ?? null;
-        }
+        DB::table('wilayah_provinsi')
+            ->pluck('code')
+            ->each(fn (string $code) => Cache::forget("wilayah:regencies:{$code}"));
 
-        if ($provinceCode && $cityCode) {
-            $cityName = $this->regencies($provinceCode)[$cityCode] ?? null;
-        }
-
-        if ($cityCode && $districtCode) {
-            $districtName = $this->districts($cityCode)[$districtCode] ?? null;
-        }
-
-        return [
-            'province' => $provinceName,
-            'city' => $cityName,
-            'district' => $districtName,
-        ];
+        DB::table('wilayah_kota')
+            ->pluck('code')
+            ->each(fn (string $code) => Cache::forget("wilayah:districts:{$code}"));
     }
 }

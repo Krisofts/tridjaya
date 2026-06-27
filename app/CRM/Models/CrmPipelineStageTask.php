@@ -21,14 +21,26 @@ class CrmPipelineStageTask extends Model
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'is_active'               => 'boolean',
+        'due_after_minutes'       => 'integer',
+        'reminder_before_minutes' => 'integer',
     ];
+
+    // -------------------------------------------------------------------------
+    // SCOPES
+    // -------------------------------------------------------------------------
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // -------------------------------------------------------------------------
+    // RELATIONS
+    // -------------------------------------------------------------------------
 
     public function stage(): BelongsTo
     {
-        return $this->belongsTo(
-            CrmPipelineStage::class,
-            'pipeline_stage_id'
-        );
+        return $this->belongsTo(CrmPipelineStage::class, 'pipeline_stage_id');
     }
 }

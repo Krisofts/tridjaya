@@ -88,15 +88,17 @@ return [
 
         'admin.access' => 'Access admin panel',
 
+        'crm.access' => 'Access CRM',
+
         'users.view' => 'View users',
         'users.create' => 'Create users',
         'users.update' => 'Update users',
         'users.delete' => 'Delete users',
 
-        'leads.view' => 'View leads',
-        'leads.create' => 'Create leads',
-        'leads.update' => 'Update leads',
-        'leads.delete' => 'Delete leads',
+        'crm.leads.view' => 'View CRM leads',
+        'crm.leads.create' => 'Create CRM leads',
+        'crm.leads.update' => 'Update CRM leads',
+        'crm.leads.delete' => 'Delete CRM leads',
         'leads.assign' => 'Assign leads',
         'leads.followup' => 'Manage follow up',
         'leads.activities' => 'Manage lead activities',
@@ -142,12 +144,13 @@ return [
         ],
 
         'sales' => [
+            'crm.access',
             'dashboard.view',
-            'leads.view',
-            'leads.create',
-            'leads.update',
-            'leads.followup',
-            'leads.activities',
+            'crm.leads.view',
+            'crm.leads.create',
+            'crm.leads.update',
+            'crm.leads.followup',
+            'crm.leads.activities',
         ],
 
         'support' => [
