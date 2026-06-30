@@ -4,6 +4,8 @@ use App\CRM\Controllers\ActivityController;
 use App\CRM\Controllers\DashboardController;
 use App\CRM\Controllers\LeadController;
 use App\CRM\Controllers\LostReasonController;
+use App\CRM\Controllers\NotificationController;
+use App\CRM\Controllers\ReportController;
 use App\CRM\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +51,36 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
     Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])
         ->name('activities.destroy');
 
+
+
+    // -------------------------------------------------------------------------
+    // Notifications
+    // -------------------------------------------------------------------------
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+
+        Route::get('/',          [NotificationController::class, 'index'])->name('index');
+        Route::get('/unread',    [NotificationController::class, 'unread'])->name('unread');
+        Route::post('/',         [NotificationController::class, 'store'])->name('store');
+
+        Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('read');
+        Route::post('/mark-all-read',       [NotificationController::class, 'markAllRead'])->name('mark-all-read');
+
+        Route::delete('/destroy-read',        [NotificationController::class, 'destroyAllRead'])->name('destroy-read');
+        Route::delete('/{notification}',      [NotificationController::class, 'destroy'])->name('destroy');
+    });
+
+    // Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('leads',              [ReportController::class, 'leads'])->name('leads');
+        Route::get('leads/export',       [ReportController::class, 'leadsExport'])->name('leads.export');
+
+        Route::get('sales-performance',        [ReportController::class, 'salesPerformance'])->name('sales-performance');
+        Route::get('sales-performance/export', [ReportController::class, 'salesPerformanceExport'])->name('sales-performance.export');
+
+        Route::get('activities',         [ReportController::class, 'activities'])->name('activities');
+        Route::get('activities/export',  [ReportController::class, 'activitiesExport'])->name('activities.export');
+    });
+
     // -------------------------------------------------------------------------
     // Tasks
     // -------------------------------------------------------------------------
@@ -69,8 +101,4 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
 
     Route::get('activity-types/{type}/results',  [ActivityController::class, 'resultsByType'])
         ->name('activity-types.results');
-
-    Route::get('leads/check-phone', [LeadController::class, 'checkPhone'])
-        ->name('leads.check-phone');
-
 });
