@@ -2,36 +2,23 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         $this->call([
+            SuperAdminSeeder::class,
             BranchSeeder::class,
 
-            // Wilayah Indonesia
-            WilayahSeeder::class,
-
-            CrmLeadSourceSeeder::class,
             CrmPipelineSeeder::class,
             CrmPipelineStageSeeder::class,
+            CrmSourceSeeder::class,
+            CrmLostReasonSeeder::class,
 
-            // Result Flow System
-            CrmResultSeeder::class,
-            CrmResultStageMappingSeeder::class,
-
-            SuperAdminSeeder::class,
-            CrmPipelineStageTaskSeeder::class,
+            CrmActivityTypeSeeder::class,
+            CrmActivityResultSeeder::class,
         ]);
     }
 }

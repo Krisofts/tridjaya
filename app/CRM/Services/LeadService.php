@@ -2,74 +2,76 @@
 
 namespace App\CRM\Services;
 
-use App\CRM\Events\LeadCreated;
-use App\CRM\Events\LeadStageChanged;
-use App\CRM\Filters\LeadFilter;
+use App\CRM\Models\CrmActivityResult;
+use App\CRM\Models\CrmActivityType;
 use App\CRM\Models\CrmLead;
+use App\CRM\Models\CrmLostReason;
+use App\CRM\Models\CrmPipeline;
 use App\CRM\Models\CrmPipelineStage;
-use App\CRM\Services\LeadStageService;
-use App\Services\RegionService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class LeadService
 {
-    public function __construct(
-        protected LeadFilter      $filter,
-        protected RegionService   $region,
-        protected LeadStageService $stageService,
-    ) {}
-
     // -------------------------------------------------------------------------
-    // QUERY / PAGINATION
+    // READ
     // -------------------------------------------------------------------------
 
-    public function getPaginated(
-        ?string $search = null,
-        ?int $sourceId = null,
-        ?int $pipelineId = null,
-        ?string $temperature = null,
-        ?int $assignedTo = null,
-        int $perPage = 15,
-    ): LengthAwarePaginator {
-        $query = CrmLead::query()->with([
-            'source',
-            'pipeline',
-            'stage',
-            'interest',
-            'assignee',
-            'creator',
-            'branch',
-        ]);
-
-        $query = $this->filter->apply($query, [
-            'search'      => $search,
-            'source_id'   => $sourceId,
-            'pipeline_id' => $pipelineId,
-            'temperature' => $temperature,
-            'assigned_to' => $assignedTo,
-        ]);
-
-        return $query->latest()->paginate($perPage)->withQueryString();
-    }
-
-    // -------------------------------------------------------------------------
-    // FIND
-    // -------------------------------------------------------------------------
-
-    public function find(int $id): CrmLead
+    public function list(array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
+        $user = Auth::user();
+
         return CrmLead::query()
             ->with([
-                'source',
                 'pipeline',
                 'stage',
-                'activities.user',
-                'assignee',
-                'creator',
-                'branch',
+                'source',
+                'product',
+                'assignedUser',
+                'province',
+                'regency',
+                'district',
+                'lostReason',
             ])
-            ->findOrFail($id);
+            ->when(
+                $user->branch_id,
+                fn ($q) => $q->byBranch($user->branch_id)
+            )
+            ->when(
+                isset($filters['pipeline_id']),
+                fn ($q) => $q->byPipeline($filters['pipeline_id'])
+            )
+            ->when(
+                isset($filters['stage_id']),
+                fn ($q) => $q->where('stage_id', $filters['stage_id'])
+            )
+            ->when(
+                isset($filters['source_id']),
+                fn ($q) => $q->where('source_id', $filters['source_id'])
+            )
+            ->when(
+                isset($filters['product_id']),
+                fn ($q) => $q->where('product_id', $filters['product_id'])
+            )
+            ->when(
+                isset($filters['assigned_to']),
+                fn ($q) => $q->assignedTo($filters['assigned_to'])
+            )
+            ->when(
+                isset($filters['status']),
+                fn ($q) => $q->where('status', $filters['status'])
+            )
+            ->when(
+                ! empty($filters['search']),
+                fn ($q) => $q->where(function ($q) use ($filters) {
+                    $q->where('name', 'like', "%{$filters['search']}%")
+                        ->orWhere('phone', 'like', "%{$filters['search']}%");
+                })
+            )
+            ->latest()
+            ->paginate($perPage);
     }
 
     // -------------------------------------------------------------------------
@@ -79,37 +81,43 @@ class LeadService
     public function create(array $data): CrmLead
     {
         return DB::transaction(function () use ($data) {
-            $data['lead_code'] = $this->generateLeadCode();
+            $pipeline = CrmPipeline::with('defaultStage')
+                ->findOrFail($data['pipeline_id']);
 
-            $firstStage = CrmPipelineStage::query()
-                ->where('pipeline_id', $data['pipeline_id'])
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->first();
-
-            if (! $firstStage) {
-                throw new \RuntimeException(
-                    "Pipeline #{$data['pipeline_id']} belum memiliki stage."
-                );
+            if (! $pipeline->defaultStage) {
+                throw ValidationException::withMessages([
+                    'pipeline_id' => 'Pipeline belum memiliki default stage.',
+                ]);
             }
 
-            $data['pipeline_stage_id'] = $firstStage->id;
+            $user = Auth::user();
 
-            // Otomatis assign ke user yang sedang login
-            $data['assigned_to'] = auth()->id();
+            $lead = CrmLead::create([
+                'pipeline_id'        => $pipeline->id,
+                'stage_id'           => $pipeline->defaultStage->id,
+                'name'               => $data['name'],
+                'phone'              => $data['phone'],
+                'product_id'         => $data['product_id'] ?? null,
+                'source_id'          => $data['source_id'] ?? null,
+                'assigned_to'        => $data['assigned_to'] ?? $user->id,
+                'created_by'         => $user->id,
+                'branch_id'          => $user->branch_id,
+                'province_id'        => $data['province_id'] ?? null,
+                'regency_id'         => $data['regency_id'] ?? null,
+                'district_id'        => $data['district_id'] ?? null,
+                'address'            => $data['address'] ?? null,
+                'estimated_value'    => $data['estimated_value'] ?? 0,
+                'probability'        => $pipeline->defaultStage->probability,
+                'next_follow_up_at'  => $data['next_follow_up_at'] ?? null,
+                'status'             => CrmLead::STATUS_OPEN,
+            ]);
 
-            // Otomatis simpan creator
-            $data['created_by'] = auth()->id();
-
-            $data = array_merge($data, $this->region->resolve(
-                $data['province_code'] ?? null,
-                $data['city_code'] ?? null,
-                $data['district_code'] ?? null,
-            ));
-
-            $lead = CrmLead::create($data);
-
-            event(new LeadCreated($lead));
+            $this->recordStageHistory(
+                lead: $lead,
+                fromStageId: null,
+                toStageId: $lead->stage_id,
+                changedBy: $user->id,
+            );
 
             return $lead;
         });
@@ -122,98 +130,243 @@ class LeadService
     public function update(CrmLead $lead, array $data): CrmLead
     {
         return DB::transaction(function () use ($lead, $data) {
-            $oldStageId   = $lead->pipeline_stage_id;
-            $stageChanged = false;
+            $fillable = [
+                'name', 'phone',
+                'product_id', 'source_id',
+                'assigned_to',
+                'province_id', 'regency_id', 'district_id', 'address',
+                'estimated_value',
+                'next_follow_up_at',
+            ];
 
-            if (
-                isset($data['pipeline_id']) &&
-                (int) $data['pipeline_id'] !== (int) $lead->pipeline_id
-            ) {
-                $defaultStage = CrmPipelineStage::query()
-                    ->where('pipeline_id', $data['pipeline_id'])
-                    ->where('is_default', true)
-                    ->first();
+            $lead->update(
+                collect($data)->only($fillable)->toArray()
+            );
 
-                if (! $defaultStage) {
-                    throw new \RuntimeException(
-                        "Pipeline #{$data['pipeline_id']} tidak memiliki stage default."
-                    );
-                }
-
-                $data['pipeline_stage_id'] = $defaultStage->id;
-                $stageChanged = true;
-            }
-
-            // Resolve nama wilayah — pakai nilai baru kalau ada, fallback ke nilai lama
-            $data = array_merge($data, $this->region->resolve(
-                $data['province_code'] ?? $lead->province_code,
-                $data['city_code']     ?? $lead->city_code,
-                $data['district_code'] ?? $lead->district_code,
-            ));
-
-            $lead->update($data);
-
-            $lead = $lead->fresh([
-                'source',
-                'pipeline',
-                'stage',
-                'assignee',
-                'creator',
-                'branch',
-            ]);
-
-            if ($stageChanged) {
-                event(new LeadStageChanged(
-                    lead: $lead,
-                    oldStageId: $oldStageId,
-                    newStageId: $lead->pipeline_stage_id,
-                ));
-            }
-
-            return $lead;
+            return $lead->fresh();
         });
     }
 
     // -------------------------------------------------------------------------
-    // CHANGE STAGE
+    // STAGE MANAGEMENT
     // -------------------------------------------------------------------------
 
-    public function changeStage(CrmLead $lead, int $stageId): CrmLead
+    public function moveToStage(CrmLead $lead, int $stageId): CrmLead
     {
-        return $this->stageService->changeStage($lead, $stageId);
+        return DB::transaction(function () use ($lead, $stageId) {
+            $stage = CrmPipelineStage::where('pipeline_id', $lead->pipeline_id)
+                ->findOrFail($stageId);
+
+            if ($lead->stage_id === $stage->id) {
+                return $lead;
+            }
+
+            $fromStageId = $lead->stage_id;
+
+            $lead->update([
+                'stage_id'    => $stage->id,
+                'probability' => $stage->probability,
+            ]);
+
+            $this->recordStageHistory(
+                lead: $lead,
+                fromStageId: $fromStageId,
+                toStageId: $stage->id,
+                changedBy: Auth::id(),
+            );
+
+            return $lead->fresh();
+        });
     }
 
     // -------------------------------------------------------------------------
-    // DELETE
-    // -------------------------------------------------------------------------
-
-    public function delete(CrmLead $lead): bool
-    {
-        return $lead->delete() !== false;
-    }
-
-    // -------------------------------------------------------------------------
-    // PRIVATE
+    // STATUS LIFECYCLE
     // -------------------------------------------------------------------------
 
     /**
-     * Generate lead code yang unik per tahun.
-     * Format : LD-2026-00001
-     * Harus dipanggil di dalam DB::transaction() agar lockForUpdate() efektif.
+     * Tandai lead sebagai Won + catat closing activity otomatis.
      */
-    private function generateLeadCode(): string
+    public function markWon(CrmLead $lead): CrmLead
     {
-        $year = now()->format('Y');
+        $this->ensureLeadIsOpen($lead);
 
-        $lastCode = CrmLead::query()
-            ->where('lead_code', 'like', "LD-{$year}-%")
-            ->lockForUpdate()
-            ->max('lead_code');
+        return DB::transaction(function () use ($lead) {
+            $lead->update([
+                'status'      => CrmLead::STATUS_WON,
+                'probability' => 100,
+                'closed_at'   => now(),
+            ]);
 
-        $nextNumber = $lastCode
-            ? (int) substr($lastCode, strrpos($lastCode, '-') + 1) + 1
-            : 1;
+            $this->recordClosingActivity(
+                lead     : $lead,
+                resultSlug: 'lead-won',
+                title    : 'Lead ditandai Won',
+                notes    : null,
+            );
 
-        return sprintf('LD-%s-%05d', $year, $nextNumber);
+            return $lead->fresh();
+        });
+    }
+
+    /**
+     * Tandai lead sebagai Lost + catat closing activity otomatis.
+     */
+    public function markLost(
+        CrmLead $lead,
+        ?int    $lostReasonId = null,
+        ?string $lostNote = null,
+    ): CrmLead {
+        $this->ensureLeadIsOpen($lead);
+
+        return DB::transaction(function () use ($lead, $lostReasonId, $lostNote) {
+            $lead->update([
+                'status'         => CrmLead::STATUS_LOST,
+                'probability'    => 0,
+                'closed_at'      => now(),
+                'lost_reason_id' => $lostReasonId,
+                'lost_note'      => $lostNote,
+            ]);
+
+            // Susun catatan activity dari reason + note
+            $reasonName = $lostReasonId
+                ? CrmLostReason::find($lostReasonId)?->name
+                : null;
+
+            $notes = collect([$reasonName, $lostNote])->filter()->implode(' — ');
+
+            $this->recordClosingActivity(
+                lead     : $lead,
+                resultSlug: 'lead-lost',
+                title    : 'Lead ditandai Lost' . ($reasonName ? ": {$reasonName}" : ''),
+                notes    : $notes ?: null,
+            );
+
+            return $lead->fresh();
+        });
+    }
+
+    /**
+     * Buka kembali lead Won / Lost + catat reopen activity otomatis.
+     */
+    public function reopen(CrmLead $lead): CrmLead
+    {
+        if ($lead->isOpen()) {
+            return $lead;
+        }
+
+        return DB::transaction(function () use ($lead) {
+            $lead->update([
+                'status'         => CrmLead::STATUS_OPEN,
+                'closed_at'      => null,
+                'lost_reason_id' => null,
+                'lost_note'      => null,
+            ]);
+
+            $this->recordClosingActivity(
+                lead     : $lead,
+                resultSlug: 'lead-reopen',
+                title    : 'Lead dibuka kembali',
+                notes    : null,
+            );
+
+            return $lead->fresh();
+        });
+    }
+
+    /**
+     * Catat waktu aktivitas terakhir pada lead.
+     */
+    public function touchLastActivity(CrmLead $lead): CrmLead
+    {
+        $lead->update(['last_activity_at' => now()]);
+
+        return $lead->fresh();
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE & RESTORE
+    // -------------------------------------------------------------------------
+
+    public function delete(CrmLead $lead): void
+    {
+        $lead->delete();
+    }
+
+    public function restore(int $id): CrmLead
+    {
+        $lead = CrmLead::withTrashed()->findOrFail($id);
+        $lead->restore();
+
+        return $lead->fresh();
+    }
+
+    public function forceDelete(int $id): void
+    {
+        CrmLead::withTrashed()->findOrFail($id)->forceDelete();
+    }
+
+    // -------------------------------------------------------------------------
+    // PRIVATE HELPERS
+    // -------------------------------------------------------------------------
+
+    private function recordStageHistory(
+        CrmLead $lead,
+        ?int    $fromStageId,
+        int     $toStageId,
+        int     $changedBy,
+    ): void {
+        $lead->stageHistories()->create([
+            'from_stage_id' => $fromStageId,
+            'to_stage_id'   => $toStageId,
+            'changed_by'    => $changedBy,
+            'changed_at'    => now(),
+        ]);
+    }
+
+    /**
+     * Catat closing activity sistem — Won / Lost / Reopen.
+     *
+     * Memakai activity type slug 'sistem' yang is_active=false
+     * sehingga tidak muncul di dropdown form sales.
+     * Jika type 'sistem' belum ada di DB, skip secara diam-diam.
+     */
+    private function recordClosingActivity(
+        CrmLead $lead,
+        string  $resultSlug,
+        string  $title,
+        ?string $notes,
+    ): void {
+        $type = CrmActivityType::where('slug', 'sistem')->first();
+
+        if (! $type) {
+            return; // Seeder belum dijalankan — skip, tidak throw error
+        }
+
+        $result = CrmActivityResult::where('activity_type_id', $type->id)
+            ->where('slug', $resultSlug)
+            ->first();
+
+        $lead->activities()->create([
+            'activity_type_id'   => $type->id,
+            'activity_result_id' => $result?->id,
+            'user_id'            => Auth::id(),
+            'activity_at'        => now(),
+            'title'              => $title,
+            'notes'              => $notes,
+            'stage_id'           => $lead->stage_id,
+            'is_contacted'       => false,
+        ]);
+
+        // Update last_activity_at
+        $lead->update(['last_activity_at' => now()]);
+    }
+
+    private function ensureLeadIsOpen(CrmLead $lead): void
+    {
+        if (! $lead->isOpen()) {
+            throw ValidationException::withMessages([
+                'status' => "Lead sudah berstatus '{$lead->status}'. Gunakan reopen() terlebih dahulu.",
+            ]);
+        }
     }
 }

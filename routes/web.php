@@ -25,11 +25,15 @@ Route::middleware(['auth', 'verified'])
     ->prefix('dashboard')
     ->name('dashboard.')
     ->group(function () {
-        Route::get('/', fn () => view('dashboard'))->name('home');
 
-        Route::prefix('sales')->name('sales.')->group(function () {
-            Route::get('/', [SalesController::class, 'index'])->name('index');
+        Route::get('/', fn () => view('dashboard'))
+            ->name('home');
+
+        Route::prefix('sales')->group(function () {
+            Route::get('/', [SalesController::class, 'index'])
+                ->name('sales');
         });
+
     });
 
 /*

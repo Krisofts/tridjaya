@@ -3,107 +3,99 @@
 namespace App\CRM\Exports;
 
 use App\CRM\Models\CrmLead;
-use App\CRM\Models\CrmPipelineStage;
-use App\User\Models\User;
+use App\CRM\Services\ReportService;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use Illuminate\Support\Collection;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Font;
 
 class LeadReportExport implements
-    FromCollection, 
+    FromCollection,
     WithHeadings,
     WithMapping,
     WithStyles,
-    ShouldAutoSize,
-    WithTitle
+    WithTitle,
+    ShouldAutoSize
 {
     public function __construct(
-        protected string $dateFrom,
-        protected string $dateTo,
-        protected ?int   $userId = null,
+        private readonly array $filters,
     ) {}
 
     public function title(): string
     {
-        return 'Laporan Leads';
+        return 'Laporan Lead';
+    }
+
+    public function collection()
+    {
+        return CrmLead::query()
+            ->with(['pipeline', 'stage', 'source', 'assignedUser', 'lostReason'])
+            ->whereBetween('created_at', [
+                $this->filters['date_from'] . ' 00:00:00',
+                $this->filters['date_to']   . ' 23:59:59',
+            ])
+            ->when($this->filters['pipeline_id'], fn ($q) => $q->where('pipeline_id', $this->filters['pipeline_id']))
+            ->when($this->filters['source_id'],   fn ($q) => $q->where('source_id',   $this->filters['source_id']))
+            ->when($this->filters['assigned_to'], fn ($q) => $q->where('assigned_to', $this->filters['assigned_to']))
+            ->when($this->filters['status'],      fn ($q) => $q->where('status',      $this->filters['status']))
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     public function headings(): array
     {
         return [
             'No',
-            'Nama Sales',
-            'Prospek Hari Ini',
-            'Prospek Periode (' . $this->dateFrom . ' s/d ' . $this->dateTo . ')',
-            'Total Semua Prospek',
-            'Close Deal (Total)',
-            'Close Deal (Periode)',
-            'Close Rate (%)',
+            'Nama',
+            'Nomor HP',
+            'Pipeline',
+            'Stage',
+            'Sumber',
+            'Sales',
+            'Status',
+            'Estimasi Nilai',
+            'Probabilitas',
+            'Follow-up',
+            'Alasan Lost',
+            'Tanggal Buat',
+            'Tanggal Tutup',
         ];
     }
 
-    public function collection(): Collection
+    public function map($lead): array
     {
-        $wonStageIds = CrmPipelineStage::where('is_won', true)->pluck('id');
+        static $no = 0;
+        $no++;
 
-        return User::when($this->userId, fn ($q) => $q->where('id', $this->userId))
-            ->orderBy('name')
-            ->get()
-            ->map(function (User $user, int $index) use ($wonStageIds) {
-                $base = CrmLead::where('assigned_to', $user->id);
-
-                return [
-                    'no'            => $index + 1,
-                    'name'          => $user->name,
-                    'today_leads'   => (clone $base)->whereDate('created_at', now()->format('Y-m-d'))->count(),
-                    'period_leads'  => (clone $base)->whereDate('created_at', '>=', $this->dateFrom)->whereDate('created_at', '<=', $this->dateTo)->count(),
-                    'total_leads'   => (clone $base)->count(),
-                    'closed_total'  => (clone $base)->whereIn('pipeline_stage_id', $wonStageIds)->count(),
-                    'closed_period' => (clone $base)->whereIn('pipeline_stage_id', $wonStageIds)->whereDate('updated_at', '>=', $this->dateFrom)->whereDate('updated_at', '<=', $this->dateTo)->count(),
-                    'close_rate'    => (clone $base)->count() > 0
-                        ? round(((clone $base)->whereIn('pipeline_stage_id', $wonStageIds)->count() / (clone $base)->count()) * 100, 1) . '%'
-                        : '0%',
-                ];
-            });
-    }
-
-    public function map($row): array
-    {
-        return array_values((array) $row);
+        return [
+            $no,
+            $lead->name,
+            $lead->phone,
+            $lead->pipeline->name ?? '—',
+            $lead->stage->name    ?? '—',
+            $lead->source->name   ?? '—',
+            $lead->assignedUser->name ?? '—',
+            $lead->statusLabel(),
+            $lead->estimated_value,
+            $lead->probability . '%',
+            $lead->next_follow_up_at?->format('d/m/Y H:i') ?? '—',
+            $lead->lostReason->name ?? '—',
+            $lead->created_at->format('d/m/Y H:i'),
+            $lead->closed_at?->format('d/m/Y H:i') ?? '—',
+        ];
     }
 
     public function styles(Worksheet $sheet): array
     {
-        $lastRow = $sheet->getHighestRow();
-
         return [
-            // Header row
             1 => [
-                'font'      => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF'], 'size' => 11],
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF3B5BDB']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            ],
-            // Data rows
-            "A2:H{$lastRow}" => [
-                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
-                'borders'   => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color'       => ['argb' => 'FFDDDDDD'],
-                    ],
-                ],
-            ],
-            // Number columns center
-            "C2:H{$lastRow}" => [
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF2563EB']],
             ],
         ];
     }

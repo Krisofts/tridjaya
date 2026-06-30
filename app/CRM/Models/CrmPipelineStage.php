@@ -10,157 +10,71 @@ class CrmPipelineStage extends Model
 {
     protected $table = 'crm_pipeline_stages';
 
-    // -------------------------------------------------------------------------
-    // TEMPERATURE CONSTANTS
-    // -------------------------------------------------------------------------
-
-    public const TEMP_COLD     = 'cold';
-    public const TEMP_WARM     = 'warm';
-    public const TEMP_HOT      = 'hot';
-    public const TEMP_CUSTOMER = 'customer';
-    public const TEMP_LOST     = 'lost';
-
-    // -------------------------------------------------------------------------
-    // FILLABLE & CASTS
-    // -------------------------------------------------------------------------
-
     protected $fillable = [
         'pipeline_id',
         'name',
+        'slug',
+        'description',
         'sort_order',
-        'color',
-        'temperature',
+        'probability',
         'is_default',
         'is_won',
         'is_lost',
+        'is_active',
     ];
 
     protected $casts = [
+        'probability' => 'integer',
+        'sort_order' => 'integer',
+
         'is_default' => 'boolean',
-        'is_won'     => 'boolean',
-        'is_lost'    => 'boolean',
+        'is_won' => 'boolean',
+        'is_lost' => 'boolean',
+        'is_active' => 'boolean',
     ];
+
+    // -------------------------------------------------------------------------
+    // SCOPES
+    // -------------------------------------------------------------------------
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 
     // -------------------------------------------------------------------------
     // RELATIONS
     // -------------------------------------------------------------------------
 
+    /**
+     * Pipeline
+     */
     public function pipeline(): BelongsTo
     {
         return $this->belongsTo(CrmPipeline::class, 'pipeline_id');
     }
 
+    /**
+     * Leads pada stage ini
+     */
     public function leads(): HasMany
     {
-        return $this->hasMany(CrmLead::class, 'pipeline_stage_id');
-    }
-
-    public function tasks(): HasMany
-    {
-        return $this->hasMany(CrmPipelineStageTask::class, 'pipeline_stage_id')
-            ->where('is_active', true)
-            ->orderBy('id');
-    }
-
-    // -------------------------------------------------------------------------
-    // TEMPERATURE HELPERS
-    // -------------------------------------------------------------------------
-
-    public function isCold(): bool
-    {
-        return $this->temperature === self::TEMP_COLD;
-    }
-
-    public function isWarm(): bool
-    {
-        return $this->temperature === self::TEMP_WARM;
-    }
-
-    public function isHot(): bool
-    {
-        return $this->temperature === self::TEMP_HOT;
-    }
-
-    public function isCustomer(): bool
-    {
-        return $this->temperature === self::TEMP_CUSTOMER;
-    }
-
-    public function isLost(): bool
-    {
-        return $this->temperature === self::TEMP_LOST;
-    }
-
-    // -------------------------------------------------------------------------
-    // STAGE HELPERS
-    // -------------------------------------------------------------------------
-
-    public function isWon(): bool
-    {
-        return $this->is_won;
-    }
-
-    // -------------------------------------------------------------------------
-    // BADGE HELPERS (dipakai di blade)
-    // -------------------------------------------------------------------------
-
-    /**
-     * Badge type berdasarkan nama stage.
-     * Dipakai: <x-ui.badge :type="$lead->stage->badgeType()">
-     */
-    public function badgeType(): string
-    {
-        return match (strtolower($this->name ?? '')) {
-            'new'  => 'info',
-            'hot'  => 'warning',
-            'won'  => 'success',
-            'lost' => 'error',
-            default => 'primary',
-        };
+        return $this->hasMany(CrmLead::class, 'stage_id');
     }
 
     /**
-     * Badge type berdasarkan temperature.
-     * Dipakai: <x-ui.badge :type="$lead->stage->temperatureBadgeType()">
+     * History sebagai stage asal
      */
-    public function temperatureBadgeType(): string
+    public function historiesFrom(): HasMany
     {
-        return match ($this->temperature ?? '') {
-            self::TEMP_HOT      => 'error',
-            self::TEMP_WARM     => 'warning',
-            self::TEMP_COLD     => 'info',
-            self::TEMP_CUSTOMER => 'success',
-            self::TEMP_LOST     => 'dark',
-            default             => 'light',
-        };
+        return $this->hasMany(CrmLeadStageHistory::class, 'from_stage_id');
     }
 
     /**
-     * Label temperature untuk ditampilkan di UI.
-     * Dipakai: {{ $lead->stage->temperatureLabel() }}
+     * History sebagai stage tujuan
      */
-    public function temperatureLabel(): string
+    public function historiesTo(): HasMany
     {
-        return match ($this->temperature) {
-            self::TEMP_COLD     => 'Cold',
-            self::TEMP_WARM     => 'Warm',
-            self::TEMP_HOT      => 'Hot',
-            self::TEMP_CUSTOMER => 'Customer',
-            self::TEMP_LOST     => 'Lost',
-            default             => '-',
-        };
-    }
-
-    // -------------------------------------------------------------------------
-    // ACCESSOR
-    // -------------------------------------------------------------------------
-
-    /**
-     * @deprecated Gunakan temperatureLabel() method langsung.
-     * Tetap dipertahankan untuk backward compatibility.
-     */
-    public function getTemperatureLabelAttribute(): string
-    {
-        return $this->temperatureLabel();
+        return $this->hasMany(CrmLeadStageHistory::class, 'to_stage_id');
     }
 }

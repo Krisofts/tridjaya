@@ -4,33 +4,37 @@ namespace Database\Seeders;
 
 use App\CRM\Models\CrmPipeline;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CrmPipelineSeeder extends Seeder
 {
     public function run(): void
     {
-        $pipelines = [
+        $data = [
             [
-                'name'        => 'Cash',
-                'description' => 'Pipeline untuk transaksi tunai',
-                'color'       => '#10B981',
-                'is_active'   => true,
+                'name' => 'Cash',
+                'sort_order' => 1,
             ],
             [
-                'name'        => 'Kredit',
-                'description' => 'Pipeline untuk transaksi kredit / leasing',
-                'color'       => '#F59E0B',
-                'is_active'   => true,
+                'name' => 'Kredit',
+                'sort_order' => 2,
             ],
         ];
 
-        foreach ($pipelines as $pipeline) {
+        foreach ($data as $item) {
             CrmPipeline::updateOrCreate(
-                ['name' => $pipeline['name']],
-                $pipeline,
+                [
+                    'slug' => Str::slug($item['name']),
+                ],
+                [
+                    'name' => $item['name'],
+                    'slug' => Str::slug($item['name']),
+                    'sort_order' => $item['sort_order'],
+                    'is_active' => true,
+                ]
             );
         }
 
-        $this->command->info('✓ Pipelines berhasil di-seed.');
+        $this->command->info('✓ CRM Pipelines seeded successfully');
     }
 }

@@ -2,168 +2,273 @@
 
 namespace App\CRM\Models;
 
-use App\Models\Branch;
+use App\Models\District;
+use App\Models\Product;
+use App\Models\Province;
+use App\Models\Regency;
 use App\User\Models\User;
-use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CrmLead extends Model
 {
+    use HasFactory, SoftDeletes;
+
+    /*
+    |--------------------------------------------------------------------------
+    | CONSTANTS
+    |--------------------------------------------------------------------------
+    */
+
+    public const STATUS_OPEN = 'open';
+    public const STATUS_WON  = 'won';
+    public const STATUS_LOST = 'lost';
+
+    public const STATUSES = [
+        self::STATUS_OPEN,
+        self::STATUS_WON,
+        self::STATUS_LOST,
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | TABLE & FILLABLE
+    |--------------------------------------------------------------------------
+    */
+
     protected $table = 'crm_leads';
 
     protected $fillable = [
-        'lead_code',
-        'lead_source_id',
+        // Pipeline
         'pipeline_id',
-        'pipeline_stage_id',
+        'stage_id',
+
+        // Customer
         'name',
         'phone',
-        'email',
-        'address',
-        'interest_id',
-        'notes',
+
+        // Relasi opsional
+        'source_id',
+        'product_id',
+
+        // Assignment
         'assigned_to',
-        'branch_id',
         'created_by',
-        'province_code',
-        'province_name',
-        'city_code',
-        'city_name',
-        'district_code',
-        'district_name',
+        'branch_id',
+
+        // Lokasi
+        'province_id',
+        'regency_id',
+        'district_id',
+        'address',
+
+        // Bisnis
+        'estimated_value',
+        'probability',
+
+        // Status & lifecycle
+        'status',
+        'lost_reason_id',
+        'lost_note',
+        'closed_at',
+
+        // Timeline
+        'last_activity_at',
+        'next_follow_up_at',
     ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | CASTS
+    |--------------------------------------------------------------------------
+    */
 
     protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        // Integer FK
+        'pipeline_id'      => 'integer',
+        'stage_id'         => 'integer',
+        'assigned_to'      => 'integer',
+        'created_by'       => 'integer',
+        'branch_id'        => 'integer',
+        'source_id'        => 'integer',
+        'product_id'       => 'integer',
+        'lost_reason_id'   => 'integer',
+        'province_id'      => 'integer',
+        'regency_id'       => 'integer',
+        'district_id'      => 'integer',
+
+        // Numeric
+        'estimated_value'  => 'decimal:2',
+        'probability'      => 'integer',
+
+        // Datetime
+        'last_activity_at'   => 'datetime',
+        'next_follow_up_at'  => 'datetime',
+        'closed_at'          => 'datetime',
+        'deleted_at'         => 'datetime',
     ];
 
-    // -------------------------------------------------------------------------
-    // MUTATORS
-    // -------------------------------------------------------------------------
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
 
-    protected function name(): Attribute
+    public function pipeline()
     {
-        return Attribute::make(
-            set: fn (?string $value): ?string => $value
-                ? ucwords(strtolower(trim(preg_replace('/\s+/', ' ', $value))))
-                : null,
-        );
+        return $this->belongsTo(CrmPipeline::class);
     }
 
-    protected function phone(): Attribute
+    public function stage()
     {
-        return Attribute::make(
-            set: function (?string $value): ?string {
-                if (! $value) return null;
-
-                $value = preg_replace('/[^0-9]/', '', $value);
-
-                return match (true) {
-                    str_starts_with($value, '0') => '62' . substr($value, 1),
-                    str_starts_with($value, '8') => '62' . $value,
-                    default                       => $value,
-                };
-            },
-        );
+        return $this->belongsTo(CrmPipelineStage::class, 'stage_id');
     }
 
-    // -------------------------------------------------------------------------
-    // ACCESSORS
-    // -------------------------------------------------------------------------
-
-    /**
-     * Format: +62 812-3456-7890
-     * Panggil eksplisit: $lead->phone_display
-     */
-    protected function phoneDisplay(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => $this->phone
-                ? preg_replace('/(\d{2})(\d{3})(\d{4})(\d{4})/', '+$1 $2-$3-$4', $this->phone)
-                : null,
-        );
-    }
-
-    /**
-     * Panggil eksplisit: $lead->temperature
-     */
-    public function getTemperatureAttribute(): ?string
-    {
-        return $this->stage?->temperature;
-    }
-
-    /**
-     * Panggil eksplisit: $lead->temperature_label
-     */
-    public function getTemperatureLabelAttribute(): string
-    {
-        return $this->stage?->temperature_label ?? 'Cold';
-    }
-
-    // -------------------------------------------------------------------------
-    // TEMPERATURE CHECKS
-    // -------------------------------------------------------------------------
-
-    public function isCold(): bool     { return $this->temperature === CrmPipelineStage::TEMP_COLD; }
-    public function isWarm(): bool     { return $this->temperature === CrmPipelineStage::TEMP_WARM; }
-    public function isHot(): bool      { return $this->temperature === CrmPipelineStage::TEMP_HOT; }
-    public function isCustomer(): bool { return $this->temperature === CrmPipelineStage::TEMP_CUSTOMER; }
-    public function isLost(): bool     { return $this->temperature === CrmPipelineStage::TEMP_LOST; }
-
-    // -------------------------------------------------------------------------
-    // RELATIONS
-    // -------------------------------------------------------------------------
-
-    public function source(): BelongsTo
-    {
-        return $this->belongsTo(CrmLeadSource::class, 'lead_source_id');
-    }
-
-    public function interest(): BelongsTo
-    {
-        return $this->belongsTo(CrmInterest::class, 'interest_id');
-    }
-
-    public function pipeline(): BelongsTo
-    {
-        return $this->belongsTo(CrmPipeline::class, 'pipeline_id');
-    }
-
-    public function stage(): BelongsTo
-    {
-        return $this->belongsTo(CrmPipelineStage::class, 'pipeline_stage_id');
-    }
-
-    public function assignee(): BelongsTo
+    public function assignedUser()
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    public function creator(): BelongsTo
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function branch(): BelongsTo
+    public function source()
     {
-        return $this->belongsTo(Branch::class, 'branch_id');
+        return $this->belongsTo(CrmSource::class);
     }
 
-    public function tasks(): HasMany
+    public function product()
     {
-        return $this->hasMany(CrmTask::class, 'lead_id')->latest();
+        return $this->belongsTo(Product::class);
     }
 
-    public function activities(): HasMany
+    public function province()
     {
-        return $this->hasMany(CrmActivity::class, 'lead_id')->latest();
+        return $this->belongsTo(Province::class);
     }
 
-    public function transactions(): HasMany
+    public function regency()
     {
-        return $this->hasMany(CrmTransaction::class, 'lead_id')->latest();
+        return $this->belongsTo(Regency::class);
+    }
+
+    public function district()
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    public function lostReason()
+    {
+        return $this->belongsTo(CrmLostReason::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(CrmLeadActivity::class, 'lead_id')
+            ->orderByDesc('activity_at');
+    }
+
+
+    public function tasks()
+    {
+        return $this->hasMany(\App\CRM\Models\CrmTask::class, 'lead_id')
+            ->orderByRaw("FIELD(status, 'open', 'done', 'cancelled')")
+            ->orderBy('due_at');
+    }
+
+    public function stageHistories()
+    {
+        return $this->hasMany(CrmLeadStageHistory::class, 'lead_id', 'id')
+            ->orderByDesc('created_at');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SCOPES
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopeOpen($query)
+    {
+        return $query->where('status', self::STATUS_OPEN);
+    }
+
+    public function scopeWon($query)
+    {
+        return $query->where('status', self::STATUS_WON);
+    }
+
+    public function scopeLost($query)
+    {
+        return $query->where('status', self::STATUS_LOST);
+    }
+
+    public function scopeByPipeline($query, ?int $pipelineId)
+    {
+        return $query->when($pipelineId, fn($q) => $q->where('pipeline_id', $pipelineId));
+    }
+
+    public function scopeAssignedTo($query, ?int $userId)
+    {
+        return $query->when($userId, fn($q) => $q->where('assigned_to', $userId));
+    }
+
+    public function scopeByBranch($query, ?int $branchId)
+    {
+        return $query->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+    }
+
+    public function scopeOverdueFollowUp($query)
+    {
+        return $query->open()
+            ->whereNotNull('next_follow_up_at')
+            ->where('next_follow_up_at', '<', now());
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    public function isOpen(): bool
+    {
+        return $this->status === self::STATUS_OPEN;
+    }
+
+    public function isWon(): bool
+    {
+        return $this->status === self::STATUS_WON;
+    }
+
+    public function isLost(): bool
+    {
+        return $this->status === self::STATUS_LOST;
+    }
+
+    public function isClosed(): bool
+    {
+        return ! $this->isOpen();
+    }
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_WON  => 'Won',
+            self::STATUS_LOST => 'Lost',
+            default           => 'Open',
+        };
+    }
+
+    public function statusColor(): string
+    {
+        return match ($this->status) {
+            self::STATUS_WON  => 'success',
+            self::STATUS_LOST => 'danger',
+            default           => 'primary',
+        };
     }
 }

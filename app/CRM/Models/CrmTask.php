@@ -5,96 +5,169 @@ namespace App\CRM\Models;
 use App\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CrmTask extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'crm_tasks';
 
+    public const PRIORITY_LOW    = 'low';
+    public const PRIORITY_MEDIUM = 'medium';
+    public const PRIORITY_HIGH   = 'high';
+
+    public const STATUS_OPEN      = 'open';
+    public const STATUS_DONE      = 'done';
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const PRIORITIES = [
+        self::PRIORITY_LOW,
+        self::PRIORITY_MEDIUM,
+        self::PRIORITY_HIGH,
+    ];
+
+    public const STATUSES = [
+        self::STATUS_OPEN,
+        self::STATUS_DONE,
+        self::STATUS_CANCELLED,
+    ];
+
     protected $fillable = [
         'lead_id',
-        'user_id',
+        'assigned_to',
         'created_by',
         'title',
         'description',
-        'type',
-        'status',
         'priority',
+        'status',
         'due_at',
-        'reminder_at',
-        'reminder_sent_at',
-        'completed_at',
-        'result_id',
+        'done_at',
+        'is_reminded',
     ];
 
     protected $casts = [
-        'due_at'           => 'datetime',
-        'reminder_at'      => 'datetime',
-        'reminder_sent_at' => 'datetime',
-        'completed_at'     => 'datetime',
+        'lead_id'     => 'integer',
+        'assigned_to' => 'integer',
+        'created_by'  => 'integer',
+        'due_at'      => 'datetime',
+        'done_at'     => 'datetime',
+        'is_reminded' => 'boolean',
+        'deleted_at'  => 'datetime',
     ];
 
-    // -------------------------------------------------------------------------
-    // RELATIONS
-    // -------------------------------------------------------------------------
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
 
-    public function lead(): BelongsTo
+    public function lead()
     {
         return $this->belongsTo(CrmLead::class, 'lead_id');
     }
 
-    public function assignee(): BelongsTo
+    public function assignedUser()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    public function creator(): BelongsTo
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function result(): BelongsTo
+    /*
+    |--------------------------------------------------------------------------
+    | SCOPES
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopeOpen($query)
     {
-        return $this->belongsTo(CrmResult::class, 'result_id');
+        return $query->where('status', self::STATUS_OPEN);
     }
 
-    // -------------------------------------------------------------------------
-    // SCOPES
-    // -------------------------------------------------------------------------
-
-    public function scopePending($query)
+    public function scopeDone($query)
     {
-        return $query->where('status', 'pending');
-    }
-
-    public function scopeCompleted($query)
-    {
-        return $query->where('status', 'completed');
+        return $query->where('status', self::STATUS_DONE);
     }
 
     public function scopeOverdue($query)
     {
-        return $query
-            ->whereIn('status', ['pending', 'in_progress'])
-            ->whereNotNull('due_at')
-            ->where('due_at', '<', now());
+        return $query->open()->where('due_at', '<', now());
     }
 
-    // -------------------------------------------------------------------------
-    // ACCESSORS
-    // -------------------------------------------------------------------------
-
-    public function getIsOverdueAttribute(): bool
+    public function scopeDueToday($query)
     {
-        return in_array($this->status, ['pending', 'in_progress'])
-            && $this->due_at
-            && $this->due_at->isPast();
+        return $query->open()->whereDate('due_at', today());
     }
 
-    public function getIsCompletedAttribute(): bool
+    public function scopeByPriority($query, string $priority)
     {
-        return $this->status === 'completed';
+        return $query->where('priority', $priority);
+    }
+
+    public function scopeAssignedTo($query, int $userId)
+    {
+        return $query->where('assigned_to', $userId);
+    }
+
+    public function scopeForLead($query, int $leadId)
+    {
+        return $query->where('lead_id', $leadId);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+    public function isOpen(): bool
+    {
+        return $this->status === self::STATUS_OPEN;
+    }
+
+    public function isDone(): bool
+    {
+        return $this->status === self::STATUS_DONE;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
+
+    public function isOverdue(): bool
+    {
+        return $this->isOpen() && $this->due_at->isPast();
+    }
+
+    public function priorityLabel(): string
+    {
+        return match ($this->priority) {
+            self::PRIORITY_HIGH => 'Tinggi',
+            self::PRIORITY_LOW  => 'Rendah',
+            default             => 'Sedang',
+        };
+    }
+
+    public function priorityColor(): string
+    {
+        return match ($this->priority) {
+            self::PRIORITY_HIGH => 'red',
+            self::PRIORITY_LOW  => 'gray',
+            default             => 'yellow',
+        };
+    }
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            self::STATUS_DONE      => 'Selesai',
+            self::STATUS_CANCELLED => 'Dibatalkan',
+            default                => 'Open',
+        };
     }
 }

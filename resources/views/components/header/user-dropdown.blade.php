@@ -65,7 +65,7 @@
                                 fill="currentColor"
                             />
                         </svg>',
-                        'path' => 'profile',
+                        'path' => '/profile',
                     ],
 
                 ];

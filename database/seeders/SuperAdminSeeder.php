@@ -15,13 +15,13 @@ class SuperAdminSeeder extends Seeder
             [
                 'email' => 'superadmin@tridjaya.com',
             ],
-            [
+            [ 
                 'name'     => 'Superadmin',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make('Juarajuarajoss2-'),
             ]
         );
 
-        app(AuthorizationService::class)
+        app(AuthorizationService::class) 
             ->addGroup($user, 'superadmin');
     }
 }
