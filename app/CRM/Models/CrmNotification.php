@@ -17,6 +17,7 @@ class CrmNotification extends Model
     public const TYPE_TASK_REMINDER    = 'task_reminder';
     public const TYPE_LEAD_WON         = 'lead_won';
     public const TYPE_LEAD_LOST        = 'lead_lost';
+    public const TYPE_LEAD_ASSIGNED    = 'lead_assigned';
     public const TYPE_MANUAL           = 'manual';
 
     protected $fillable = [
@@ -104,6 +105,7 @@ class CrmNotification extends Model
             self::TYPE_FOLLOWUP_OVERDUE => 'orange',
             self::TYPE_LEAD_WON         => 'green',
             self::TYPE_LEAD_LOST        => 'red',
+            self::TYPE_LEAD_ASSIGNED    => 'blue',
             self::TYPE_TASK_REMINDER    => 'yellow',
             default                     => 'blue',
         };
@@ -117,6 +119,7 @@ class CrmNotification extends Model
             self::TYPE_FOLLOWUP_OVERDUE => 'followup',
             self::TYPE_LEAD_WON         => 'won',
             self::TYPE_LEAD_LOST        => 'lost',
+            self::TYPE_LEAD_ASSIGNED    => 'assigned',
             default                     => 'bell',
         };
     }

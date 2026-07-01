@@ -12,36 +12,24 @@ class MenuHelper
             [
                 'icon' => 'dashboard',
                 'name' => 'Dashboard',
-                'groups' => ['superadmin', 'manager', 'finance'],
+                'groups' => ['superadmin', 'owner' ,'manager', 'finance'],
                 'subItems' => [
-                    ['name' => 'Penjualan', 'route' => 'dashboard.sales.index'],
+                    ['name' => 'Penjualan', 'route' => 'dashboard.sales'],
                 ],
             ],
-            [
-                'icon' => 'ecommerce',
-                'name' => 'Ecommerce',
-                'groups' => ['superadmin', 'manager', 'finance'],
-                'subItems' => [
-                    ['name' => 'Dashboard', 'route' => 'ecommerce.dashboard'],
-                    ['name' => 'Produk',    'route' => 'ecommerce.products.index'],
-                    ['name' => 'Kategori',  'route' => 'ecommerce.categories.index'],
-                    ['name' => 'Order',     'route' => 'ecommerce.orders.index'],
-                    ['name' => 'Customer',  'route' => 'ecommerce.customers.index'],
-                    ['name' => 'Laporan',   'route' => 'ecommerce.reports.index'],
-                ],
-            ],
+          
             [
                 'icon' => 'user-profile',
                 'name' => 'Sales',
-                'groups' => ['superadmin', 'manager'],
+                'groups' => ['superadmin', 'hrd'],
                 'subItems' => [
                     ['name' => 'Performance', 'route' => 'sales.performance'],
                     ['name' => 'Analytics',   'route' => 'sales.analytics'],
                 ],
             ],
             [
-                'icon' => 'user-profile',
-                'name' => 'HR',
+                'icon' => 'hrd',
+                'name' => 'HRD GA',
                 'groups' => ['superadmin', 'manager'],
                 'subItems' => [
                     ['name' => 'Users', 'route' => 'users.index'],
@@ -58,11 +46,9 @@ class MenuHelper
                 'subItems' => [
                     ['name' => 'Dashboard',    'route' => 'crm.dashboard'],
                     ['name' => 'Semua Lead',   'route' => 'crm.leads.index'],
+                    ['name' => 'Lead Saya',   'route' => 'crm.leads.my-leads'],
                     ['name' => 'Tasks',        'route' => 'crm.tasks.index'],
-                    ['name' => 'Laporan Lead',       'route' => 'crm.reports.leads'],
-                    ['name' => 'Performa Sales',     'route' => 'crm.reports.sales-performance'],
-                    ['name' => 'Laporan Aktivitas',  'route' => 'crm.reports.activities'],
-                    ['name' => 'Notifikasi',   'route' => 'crm.notifications.index'],
+                    ['name' => 'Laporan',     'route' => 'crm.reports.index'],
                     ['name' => 'Alasan Lost',  'route' => 'crm.lost-reasons.index'],
                 ],
             ],
@@ -152,19 +138,7 @@ class MenuHelper
         return false;
     }
 
-    public static function getIconSvg(string $icon): string
-    {
-        $icons = [
-            'dashboard'    => '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>',
-            'ecommerce'    => '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>',
-            'user-profile' => '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>',
-            'crm'          => '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
-            'default'      => '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>',
-        ];
-
-        return $icons[$icon] ?? $icons['default'];
-    }
-
+   
     // =========================================================================
     // Private
     // =========================================================================

@@ -14,6 +14,7 @@ use App\Models\Regency;
 use App\User\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class LeadController extends Controller
@@ -21,6 +22,24 @@ class LeadController extends Controller
     public function __construct(
         private readonly LeadService $service,
     ) {}
+
+    // -------------------------------------------------------------------------
+    // MY LEADS
+    // -------------------------------------------------------------------------
+
+    public function myLeads(Request $request): View
+    {
+        $filters = $request->only([
+            'pipeline_id', 'status', 'search',
+        ]);
+
+        $leads     = $this->service->myLeads($filters, perPage: 20);
+        $pipelines = CrmPipeline::orderBy('name')->get();
+
+        return view('pages.crm.leads.my-leads', compact(
+            'leads', 'filters', 'pipelines'
+        ));
+    }
 
     // -------------------------------------------------------------------------
     // INDEX
@@ -53,11 +72,12 @@ class LeadController extends Controller
         $pipelines  = CrmPipeline::with('stages')->orderBy('name')->get();
         $sources    = CrmSource::orderBy('name')->get();
         $products   = Product::orderBy('name')->get();
+        $interests  = \App\CRM\Models\CrmInterest::active()->ordered()->get();
         $provinces  = Province::orderBy('name')->get();
         $users      = User::orderBy('name')->get();
 
         return view('pages.crm.leads.create', compact(
-            'pipelines', 'sources', 'products', 'provinces', 'users'
+            'pipelines', 'sources', 'products', 'interests', 'provinces', 'users'
         ));
     }
 
@@ -69,6 +89,7 @@ class LeadController extends Controller
             'phone'             => ['required', 'string', 'max:25'],
             'source_id'         => ['nullable', 'exists:crm_sources,id'],
             'product_id'        => ['nullable', 'exists:products,id'],
+            'interest_id'       => ['nullable', 'exists:crm_interests,id'],
             'assigned_to'       => ['nullable', 'exists:users,id'],
             'province_id'       => ['nullable', 'exists:provinces,id'],
             'regency_id'        => ['nullable', 'exists:regencies,id'],
@@ -111,6 +132,7 @@ class LeadController extends Controller
             'createdBy',
             'source',
             'product',
+            'interest',
             'province',
             'regency',
             'district',
@@ -145,6 +167,7 @@ class LeadController extends Controller
         $pipelines  = CrmPipeline::with('stages')->orderBy('name')->get();
         $sources    = CrmSource::orderBy('name')->get();
         $products   = Product::orderBy('name')->get();
+        $interests  = \App\CRM\Models\CrmInterest::active()->ordered()->get();
         $provinces  = Province::orderBy('name')->get();
         $regencies  = $lead->province_id
             ? Regency::where('province_id', $lead->province_id)->orderBy('name')->get()
@@ -155,7 +178,7 @@ class LeadController extends Controller
         $users      = User::orderBy('name')->get();
 
         return view('pages.crm.leads.edit', compact(
-            'lead', 'pipelines', 'sources', 'products',
+            'lead', 'pipelines', 'sources', 'products', 'interests',
             'provinces', 'regencies', 'districts', 'users'
         ));
     }
@@ -167,6 +190,7 @@ class LeadController extends Controller
             'phone'             => ['required', 'string', 'max:25'],
             'source_id'         => ['nullable', 'exists:crm_sources,id'],
             'product_id'        => ['nullable', 'exists:products,id'],
+            'interest_id'       => ['nullable', 'exists:crm_interests,id'],
             'assigned_to'       => ['nullable', 'exists:users,id'],
             'province_id'       => ['nullable', 'exists:provinces,id'],
             'regency_id'        => ['nullable', 'exists:regencies,id'],

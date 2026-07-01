@@ -2,109 +2,74 @@
 
 namespace App\CRM\Controllers;
 
+use App\CRM\Exports\ActivityReportExport;
 use App\CRM\Exports\LeadReportExport;
 use App\CRM\Exports\SalesPerformanceExport;
-use App\CRM\Exports\ActivityReportExport;
+use App\CRM\Models\CrmPipeline;
+use App\CRM\Models\CrmSource;
 use App\CRM\Services\ReportService;
 use App\Http\Controllers\Controller;
 use App\User\Models\User;
-use App\CRM\Models\CrmPipeline;
-use App\CRM\Models\CrmSource;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 
-class ReportController extends Controller 
+class ReportController extends Controller
 {
     public function __construct(
         private readonly ReportService $service,
     ) {}
- 
+
     // -------------------------------------------------------------------------
-    // LAPORAN LEAD
+    // INDEX — satu halaman dengan 3 tab
     // -------------------------------------------------------------------------
 
-    public function leads(Request $request): View
+    public function index(Request $request): View
     {
+        $tab     = $request->get('tab', 'leads'); // leads | sales | activities
         $filters = $this->resolveFilters($request);
         $data    = null;
 
         if ($request->filled('date_from')) {
-            $data = $this->service->leadReport($filters);
+            $data = match ($tab) {
+                'sales'      => $this->service->salesPerformanceReport($filters),
+                'activities' => $this->service->activityReport($filters),
+                default      => $this->service->leadReport($filters),
+            };
         }
 
         $pipelines = CrmPipeline::active()->orderBy('name')->get();
         $sources   = CrmSource::active()->ordered()->get();
         $users     = User::orderBy('name')->get();
 
-        return view('pages.crm.reports.leads', compact(
-            'data', 'filters', 'pipelines', 'sources', 'users'
+        return view('pages.crm.reports.index', compact(
+            'tab', 'data', 'filters', 'pipelines', 'sources', 'users'
         ));
     }
 
-    public function leadsExport(Request $request)
-    {
-        $filters  = $this->resolveFilters($request);
-        $filename = 'laporan-lead-' . now()->format('Ymd-His') . '.xlsx';
-
-        return Excel::download(new LeadReportExport($filters), $filename);
-    }
-
     // -------------------------------------------------------------------------
-    // LAPORAN PERFORMA SALES
+    // EXPORT
     // -------------------------------------------------------------------------
 
-    public function salesPerformance(Request $request): View
+    public function export(Request $request)
     {
+        $tab     = $request->get('tab', 'leads');
         $filters = $this->resolveFilters($request);
-        $data    = null;
 
-        if ($request->filled('date_from')) {
-            $data = $this->service->salesPerformanceReport($filters);
-        }
-
-        $pipelines = CrmPipeline::active()->orderBy('name')->get();
-        $users     = User::orderBy('name')->get();
-
-        return view('pages.crm.reports.sales-performance', compact(
-            'data', 'filters', 'pipelines', 'users'
-        ));
-    }
-
-    public function salesPerformanceExport(Request $request)
-    {
-        $filters  = $this->resolveFilters($request);
-        $filename = 'performa-sales-' . now()->format('Ymd-His') . '.xlsx';
-
-        return Excel::download(new SalesPerformanceExport($filters), $filename);
-    }
-
-    // -------------------------------------------------------------------------
-    // LAPORAN AKTIVITAS
-    // -------------------------------------------------------------------------
-
-    public function activities(Request $request): View
-    {
-        $filters = $this->resolveFilters($request);
-        $data    = null;
-
-        if ($request->filled('date_from')) {
-            $data = $this->service->activityReport($filters);
-        }
-
-        $users = User::orderBy('name')->get();
-
-        return view('pages.crm.reports.activities', compact(
-            'data', 'filters', 'users'
-        ));
-    }
-
-    public function activitiesExport(Request $request)
-    {
-        $filters  = $this->resolveFilters($request);
-        $filename = 'laporan-aktivitas-' . now()->format('Ymd-His') . '.xlsx';
-
-        return Excel::download(new ActivityReportExport($filters), $filename);
+        return match ($tab) {
+            'sales' => Excel::download(
+                new SalesPerformanceExport($filters),
+                'performa-sales-' . now()->format('Ymd-His') . '.xlsx'
+            ),
+            'activities' => Excel::download(
+                new ActivityReportExport($filters),
+                'laporan-aktivitas-' . now()->format('Ymd-His') . '.xlsx'
+            ),
+            default => Excel::download(
+                new LeadReportExport($filters),
+                'laporan-lead-' . now()->format('Ymd-His') . '.xlsx'
+            ),
+        };
     }
 
     // -------------------------------------------------------------------------

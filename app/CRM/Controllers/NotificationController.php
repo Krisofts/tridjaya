@@ -63,17 +63,18 @@ class NotificationController extends Controller
     // MARK READ
     // -------------------------------------------------------------------------
 
-    public function markRead(CrmNotification $notification): JsonResponse|RedirectResponse
+    public function markRead(CrmNotification $notification): RedirectResponse
     {
         $this->service->markRead($notification);
 
-        if (request()->expectsJson()) {
-            return response()->json(['success' => true]);
+        if ($notification->action_url) {
+            // action_url disimpan sebagai path (/crm/leads/1)
+            // resolve ke URL absolut berdasarkan host saat ini
+            $url = url($notification->action_url);
+            return redirect($url);
         }
 
-        return $notification->action_url
-            ? redirect($notification->action_url)
-            : back();
+        return redirect()->route('crm.notifications.index');
     }
 
     public function markAllRead(): JsonResponse

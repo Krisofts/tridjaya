@@ -128,6 +128,11 @@
                     <span class="text-xs text-gray-400 dark:text-gray-500 min-w-[130px] pt-0.5 font-medium">Produk</span>
                     <span class="text-sm text-gray-800 dark:text-gray-200">{{ $lead->product->name ?? '—' }}</span>
                 </div>
+
+                <div class="flex items-start gap-4 px-5 py-3">
+                    <span class="text-xs text-gray-400 dark:text-gray-500 min-w-[130px] pt-0.5 font-medium">Minat</span>
+                    <span class="text-sm text-gray-800 dark:text-gray-200">{{ $lead->interest->name ?? '—' }}</span>
+                </div>
                 <div class="flex items-start gap-4 px-5 py-3">
                     <span class="text-xs text-gray-400 dark:text-gray-500 min-w-[130px] pt-0.5 font-medium">Sales</span>
                     @if($lead->assignedUser)
@@ -333,105 +338,6 @@
                 @endforelse
             </div>
         </div>
-
-{{--
-    Panel task untuk show.blade.php lead
-    Taruh setelah panel Aktivitas, sebelum penutup div xl:col-span-2
-
-    Pastikan di LeadController::show() sudah load:
-    'tasks.assignedUser'
-
-    Dan di show() tambahkan:
-    $lead->load([..., 'tasks.assignedUser']);
---}}
-
-<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-sm font-semibold text-gray-800 dark:text-white">
-            Tasks
-            <span class="ml-1.5 px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-md">
-                {{ $lead->tasks->where('status', 'open')->count() }} open
-            </span>
-        </h2>
-        <a href="{{ route('crm.tasks.create', ['lead_id' => $lead->id]) }}"
-           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            Tambah Task
-        </a>
-    </div>
-
-    <div class="divide-y divide-gray-100 dark:divide-gray-700">
-        @forelse($lead->tasks as $task)
-        @php
-            $priorityColors = [
-                'high'   => 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                'medium' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                'low'    => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-            ];
-        @endphp
-        <div class="flex items-start gap-3 px-5 py-3 group">
-
-            {{-- Checkbox --}}
-            @if($task->isOpen())
-            <form method="POST" action="{{ route('crm.tasks.done', $task) }}" class="flex-shrink-0 mt-0.5">
-                @csrf @method('PATCH')
-                <button type="submit" title="Tandai selesai"
-                        class="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-600 hover:border-blue-500 transition-colors flex-shrink-0">
-                </button>
-            </form>
-            @else
-            <div class="flex-shrink-0 mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center
-                        {{ $task->isDone() ? 'border-green-500 bg-green-500' : 'border-gray-300 dark:border-gray-600' }}">
-                @if($task->isDone())
-                    <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-                @endif
-            </div>
-            @endif
-
-            {{-- Konten --}}
-            <div class="flex-1 min-w-0">
-                <p class="text-sm {{ $task->isDone() ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200' }}">
-                    {{ $task->title }}
-                </p>
-                <div class="flex items-center flex-wrap gap-2 mt-0.5">
-                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ $priorityColors[$task->priority] }}">
-                        {{ $task->priorityLabel() }}
-                    </span>
-                    <span class="text-xs {{ $task->isOverdue() ? 'text-red-500' : 'text-gray-400 dark:text-gray-500' }}">
-                        {{ $task->due_at->format('d M Y, H:i') }}
-                        @if($task->isOverdue()) (terlambat) @endif
-                    </span>
-                    @if($task->assignedUser)
-                        <span class="text-xs text-gray-400 dark:text-gray-500">→ {{ $task->assignedUser->name }}</span>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Actions --}}
-            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <a href="{{ route('crm.tasks.edit', $task) }}"
-                   class="p-1 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/30 rounded transition-colors">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-                </a>
-                <form method="POST" action="{{ route('crm.tasks.destroy', $task) }}"
-                      onsubmit="return confirm('Hapus task ini?')">
-                    @csrf @method('DELETE')
-                    <button type="submit"
-                            class="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
-                    </button>
-                </form>
-            </div>
-        </div>
-        @empty
-        <div class="px-5 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-            Belum ada task untuk lead ini.
-        </div>
-        @endforelse
-    </div>
-</div>
-
-
 
     </div>
 

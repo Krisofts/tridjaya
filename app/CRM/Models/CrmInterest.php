@@ -3,10 +3,12 @@
 namespace App\CRM\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class CrmInterest extends Model
 {
+    use HasFactory;
+
     protected $table = 'crm_interests';
 
     protected $fillable = [
@@ -16,24 +18,33 @@ class CrmInterest extends Model
     ];
 
     protected $casts = [
-        'is_active'  => 'boolean',
         'sort_order' => 'integer',
+        'is_active'  => 'boolean',
     ];
 
-    // -------------------------------------------------------------------------
-    // SCOPES
-    // -------------------------------------------------------------------------
+    /*
+    |--------------------------------------------------------------------------
+    | SCOPES
+    |--------------------------------------------------------------------------
+    */
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    // -------------------------------------------------------------------------
-    // RELATIONS
-    // -------------------------------------------------------------------------
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('name');
+    }
 
-    public function leads(): HasMany
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONSHIPS
+    |--------------------------------------------------------------------------
+    */
+
+    public function leads()
     {
         return $this->hasMany(CrmLead::class, 'interest_id');
     }

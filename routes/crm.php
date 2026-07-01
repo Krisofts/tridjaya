@@ -18,6 +18,12 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
         ->name('dashboard');
 
     // -------------------------------------------------------------------------
+    // Reports — satu halaman dengan 3 tab (leads | sales | activities)
+    // -------------------------------------------------------------------------
+    Route::get('reports',        [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+    // -------------------------------------------------------------------------
     // Lost Reasons — Master Data
     // -------------------------------------------------------------------------
     Route::resource('lost-reasons', LostReasonController::class)
@@ -27,8 +33,14 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
         ->name('lost-reasons.toggle-active');
 
     // -------------------------------------------------------------------------
-    // Leads — CRUD + lifecycle
+    // Leads — AJAX check-phone harus SEBELUM resource agar tidak bentrok {lead}
     // -------------------------------------------------------------------------
+    Route::get('leads/check-phone', [LeadController::class, 'checkPhone'])
+        ->name('leads.check-phone');
+
+    Route::get('leads/my-leads', [LeadController::class, 'myLeads'])
+        ->name('leads.my-leads');
+
     Route::resource('leads', LeadController::class);
 
     Route::patch('leads/{lead}/move-stage', [LeadController::class, 'moveStage'])
@@ -51,36 +63,6 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
     Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])
         ->name('activities.destroy');
 
-
-
-    // -------------------------------------------------------------------------
-    // Notifications
-    // -------------------------------------------------------------------------
-    Route::prefix('notifications')->name('notifications.')->group(function () {
-
-        Route::get('/',          [NotificationController::class, 'index'])->name('index');
-        Route::get('/unread',    [NotificationController::class, 'unread'])->name('unread');
-        Route::post('/',         [NotificationController::class, 'store'])->name('store');
-
-        Route::post('/{notification}/read', [NotificationController::class, 'markRead'])->name('read');
-        Route::post('/mark-all-read',       [NotificationController::class, 'markAllRead'])->name('mark-all-read');
-
-        Route::delete('/destroy-read',        [NotificationController::class, 'destroyAllRead'])->name('destroy-read');
-        Route::delete('/{notification}',      [NotificationController::class, 'destroy'])->name('destroy');
-    });
-
-    // Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('leads',              [ReportController::class, 'leads'])->name('leads');
-        Route::get('leads/export',       [ReportController::class, 'leadsExport'])->name('leads.export');
-
-        Route::get('sales-performance',        [ReportController::class, 'salesPerformance'])->name('sales-performance');
-        Route::get('sales-performance/export', [ReportController::class, 'salesPerformanceExport'])->name('sales-performance.export');
-
-        Route::get('activities',         [ReportController::class, 'activities'])->name('activities');
-        Route::get('activities/export',  [ReportController::class, 'activitiesExport'])->name('activities.export');
-    });
-
     // -------------------------------------------------------------------------
     // Tasks
     // -------------------------------------------------------------------------
@@ -89,6 +71,19 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
     Route::patch('tasks/{task}/done',   [TaskController::class, 'markDone'])->name('tasks.done');
     Route::patch('tasks/{task}/reopen', [TaskController::class, 'reopen'])->name('tasks.reopen');
     Route::patch('tasks/{task}/cancel', [TaskController::class, 'cancel'])->name('tasks.cancel');
+
+    // -------------------------------------------------------------------------
+    // Notifications
+    // -------------------------------------------------------------------------
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/',                         [NotificationController::class, 'index'])->name('index');
+        Route::get('/unread',                   [NotificationController::class, 'unread'])->name('unread');
+        Route::post('/',                        [NotificationController::class, 'store'])->name('store');
+        Route::post('/mark-all-read',           [NotificationController::class, 'markAllRead'])->name('mark-all-read');
+        Route::post('/{notification}/read',     [NotificationController::class, 'markRead'])->name('read');
+        Route::delete('/destroy-read',          [NotificationController::class, 'destroyAllRead'])->name('destroy-read');
+        Route::delete('/{notification}',        [NotificationController::class, 'destroy'])->name('destroy');
+    });
 
     // -------------------------------------------------------------------------
     // AJAX — Cascade dropdown
@@ -101,4 +96,5 @@ Route::prefix('crm')->name('crm.')->middleware(['auth'])->group(function () {
 
     Route::get('activity-types/{type}/results',  [ActivityController::class, 'resultsByType'])
         ->name('activity-types.results');
+
 });

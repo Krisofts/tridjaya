@@ -51,6 +51,7 @@ class CrmLead extends Model
         // Relasi opsional
         'source_id',
         'product_id',
+        'interest_id',
 
         // Assignment
         'assigned_to',
@@ -93,6 +94,7 @@ class CrmLead extends Model
         'branch_id'        => 'integer',
         'source_id'        => 'integer',
         'product_id'       => 'integer',
+        'interest_id'      => 'integer',
         'lost_reason_id'   => 'integer',
         'province_id'      => 'integer',
         'regency_id'       => 'integer',
@@ -145,6 +147,11 @@ class CrmLead extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function interest()
+    {
+        return $this->belongsTo(CrmInterest::class);
+    }
+
     public function province()
     {
         return $this->belongsTo(Province::class);
@@ -165,18 +172,22 @@ class CrmLead extends Model
         return $this->belongsTo(CrmLostReason::class);
     }
 
-    public function activities()
+    public function notifications()
     {
-        return $this->hasMany(CrmLeadActivity::class, 'lead_id')
-            ->orderByDesc('activity_at');
+        return $this->hasMany(CrmNotification::class, 'lead_id');
     }
-
 
     public function tasks()
     {
         return $this->hasMany(\App\CRM\Models\CrmTask::class, 'lead_id')
-            ->orderByRaw("FIELD(status, 'open', 'done', 'cancelled')")
+            ->orderByRaw("FIELD(status,'open','done','cancelled')")
             ->orderBy('due_at');
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(CrmLeadActivity::class, 'lead_id')
+            ->orderByDesc('activity_at');
     }
 
     public function stageHistories()
@@ -208,17 +219,17 @@ class CrmLead extends Model
 
     public function scopeByPipeline($query, ?int $pipelineId)
     {
-        return $query->when($pipelineId, fn($q) => $q->where('pipeline_id', $pipelineId));
+        return $query->when($pipelineId, fn ($q) => $q->where('pipeline_id', $pipelineId));
     }
 
     public function scopeAssignedTo($query, ?int $userId)
     {
-        return $query->when($userId, fn($q) => $q->where('assigned_to', $userId));
+        return $query->when($userId, fn ($q) => $q->where('assigned_to', $userId));
     }
 
     public function scopeByBranch($query, ?int $branchId)
     {
-        return $query->when($branchId, fn($q) => $q->where('branch_id', $branchId));
+        return $query->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
     }
 
     public function scopeOverdueFollowUp($query)
@@ -272,3 +283,9 @@ class CrmLead extends Model
         };
     }
 }
+
+// Tambahkan relasi ini di CrmLead model dalam section RELATIONSHIPS:
+// public function tasks()
+// {
+//     return $this->hasMany(CrmTask::class, 'lead_id')->orderByRaw("FIELD(status,'open','done','cancelled')")->orderBy('due_at');
+// }

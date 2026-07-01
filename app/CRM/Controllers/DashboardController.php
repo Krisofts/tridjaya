@@ -40,21 +40,23 @@ class DashboardController extends Controller
         $performance = $this->dashboard->salesPerformance($branchId);
         $recentLeads = $this->dashboard->recentLeads($branchId);
         $trend       = $this->dashboard->leadTrend($branchId);
+        $todayLeads  = $this->dashboard->todayLeads($branchId);
 
         return view('pages.crm.dashboard.manager', compact(
-            'stats', 'pipelines', 'performance', 'recentLeads', 'trend'
+            'stats', 'pipelines', 'performance', 'recentLeads', 'trend', 'todayLeads'
         ));
     }
 
     private function salesView($user): View
     {
-        $stats      = $this->dashboard->salesStats($user);
-        $tasks      = $this->dashboard->salesTodayTasks($user);
-        $myLeads    = $this->dashboard->salesMyLeads($user);
-        $activities = $this->dashboard->salesRecentActivities($user);
+        $stats          = $this->dashboard->salesStats($user);
+        $tasks          = $this->dashboard->salesTodayTasks($user);
+        $myLeads        = $this->dashboard->salesMyLeads($user);
+        $activities     = $this->dashboard->salesRecentActivities($user);
+        $todayLeads     = $this->dashboard->salesTodayLeads($user);
 
         return view('pages.crm.dashboard.sales', compact(
-            'stats', 'tasks', 'myLeads', 'activities'
+            'stats', 'tasks', 'myLeads', 'activities', 'todayLeads'
         ));
     }
 }
