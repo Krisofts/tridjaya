@@ -42,10 +42,10 @@ class MenuHelper
             [
                 'icon'   => 'crm',
                 'name'   => 'CRM',
-                'groups' => ['superadmin', 'owner', 'manager', 'sales'],
+                'groups' => ['superadmin', 'owner', 'manager', 'sales', 'driver','pdi',],
                 'subItems' => [
                     ['name' => 'Dashboard',    'route' => 'crm.dashboard'],
-                    ['name' => 'Semua Lead',   'route' => 'crm.leads.index'],
+                    ['name' => 'Semua Lead',  'groups' => ['superadmin', 'manager'],  'route' => 'crm.leads.index'],
                     ['name' => 'Lead Saya',   'route' => 'crm.leads.my-leads'],
                     ['name' => 'Tasks',        'route' => 'crm.tasks.index'],
                     ['name' => 'Laporan',     'route' => 'crm.reports.index'],
