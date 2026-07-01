@@ -11,6 +11,7 @@ class CrmInterestSeeder extends Seeder
     {
         $interests = [
             'Elektronik',
+            'Sepeda Listrik',
             'Furniture',
             'Gadget',
             'Alat Tani',
