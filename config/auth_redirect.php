@@ -13,12 +13,12 @@ return [
 
         'sales'      => 'crm.dashboard',
 
-        'support'    => 'support.dashboard',
-        'driver'     => 'driver.dashboard',
-        'pdi'        => 'pdi.dashboard',
+        'support'    => 'crm.dashboard',
+        'driver'     => 'crm.dashboard',
+        'pdi'        => 'crm.dashboard',
 
-        'user'       => 'dashboard',
+        'user'       => 'crm.dashboard',
     ],
 
-    'default' => 'dashboard.sales',
+    'default' => 'crm.dashboard',
 ];
