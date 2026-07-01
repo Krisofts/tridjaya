@@ -12,16 +12,16 @@ class MenuHelper
             [
                 'icon' => 'dashboard',
                 'name' => 'Dashboard',
-                'groups' => ['superadmin', 'owner' ,'manager', 'finance'],
+                'groups' => ['superadmin', 'owner', 'manager', 'finance'],
                 'subItems' => [
                     ['name' => 'Penjualan', 'route' => 'dashboard.sales'],
                 ],
             ],
-          
+
             [
                 'icon' => 'user-profile',
                 'name' => 'Sales',
-                'groups' => ['superadmin', 'hrd'],
+                'groups' => ['superadmin', 'manager'],
                 'subItems' => [
                     ['name' => 'Performance', 'route' => 'sales.performance'],
                     ['name' => 'Analytics',   'route' => 'sales.analytics'],
@@ -30,7 +30,7 @@ class MenuHelper
             [
                 'icon' => 'hrd',
                 'name' => 'HRD GA',
-                'groups' => ['superadmin', 'manager'],
+                'groups' => ['superadmin', 'manager', 'hrd'],
                 'subItems' => [
                     ['name' => 'Users', 'route' => 'users.index'],
                 ],
@@ -42,14 +42,14 @@ class MenuHelper
             [
                 'icon'   => 'crm',
                 'name'   => 'CRM',
-                'groups' => ['superadmin', 'owner', 'manager', 'sales', 'driver','pdi',],
+                'groups' => ['superadmin', 'owner', 'manager', 'hrd' , 'sales', 'driver', 'pdi',],
                 'subItems' => [
                     ['name' => 'Dashboard',    'route' => 'crm.dashboard'],
                     ['name' => 'Semua Lead',  'groups' => ['superadmin', 'manager'],  'route' => 'crm.leads.index'],
                     ['name' => 'Lead Saya',   'route' => 'crm.leads.my-leads'],
                     ['name' => 'Tasks',        'route' => 'crm.tasks.index'],
-                    ['name' => 'Laporan',     'route' => 'crm.reports.index'],
-                    ['name' => 'Alasan Lost',  'route' => 'crm.lost-reasons.index'],
+                    ['name' => 'Laporan',    'groups' => ['superadmin', 'manager'],  'route' => 'crm.reports.index'],
+                    ['name' => 'Alasan Lost',  'groups' => ['superadmin', 'manager'], 'route' => 'crm.lost-reasons.index'],
                 ],
             ],
 
@@ -138,7 +138,7 @@ class MenuHelper
         return false;
     }
 
-   
+
     // =========================================================================
     // Private
     // =========================================================================
