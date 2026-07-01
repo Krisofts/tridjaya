@@ -18,6 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name',
+    'nik',
     'email',
     'password',
     'branch_id',
@@ -42,27 +43,17 @@ class User extends Authenticatable
 
     public function groups(): HasMany
     {
-        return $this->hasMany(
-            AuthGroupUser::class,
-            'user_id'
-        );
+        return $this->hasMany(AuthGroupUser::class, 'user_id');
     }
 
     public function permissions(): HasMany
     {
-        return $this->hasMany(
-            AuthPermissionUser::class,
-            'user_id'
-        );
+        return $this->hasMany(AuthPermissionUser::class, 'user_id');
     }
-
 
     public function branch(): BelongsTo
     {
-        return $this->belongsTo(
-            Branch::class,
-            'branch_id'
-        );
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     /*
@@ -75,7 +66,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 }

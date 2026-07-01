@@ -63,6 +63,7 @@ class UserService
 
             $user = User::create([
                 'name'      => $data['name'],
+                'nik'       => $data['nik'] ?? null,
                 'email'     => $data['email'],
                 'password'  => $data['password'],
                 'branch_id' => $data['branch_id'] ?? null,
@@ -97,11 +98,12 @@ class UserService
 
             $payload = [
                 'name'      => $data['name'],
+                'nik'       => $data['nik'] ?? null,
                 'email'     => $data['email'],
                 'branch_id' => $data['branch_id'] ?? null,
             ];
 
-            if (!empty($data['password'])) {
+            if (! empty($data['password'])) {
                 $payload['password'] = $data['password'];
             }
 
@@ -168,43 +170,35 @@ class UserService
     |--------------------------------------------------------------------------
     */
     public function getFilterData(): array
-{
-    return [
-        'branches' => Branch::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Branch $branch) => [
-                'value' => $branch->id,
-                'label' => "{$branch->code} - {$branch->name}",
-            ])
-            ->values()
-            ->toArray(),
+    {
+        return [
+            'branches' => Branch::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Branch $branch) => [
+                    'value' => $branch->id,
+                    'label' => "{$branch->code} - {$branch->name}",
+                ])
+                ->values()
+                ->toArray(),
 
-        'groups' => collect(config('auth_groups.groups', []))
-            ->map(fn (array $group, string $key) => [
-                'value' => $key,
-                'label' => $group['title'],
-            ])
-            ->values()
-            ->toArray(),
+            'groups' => collect(config('auth_groups.groups', []))
+                ->map(fn (array $group, string $key) => [
+                    'value' => $key,
+                    'label' => $group['title'],
+                ])
+                ->values()
+                ->toArray(),
 
-        'sortOptions' => [
-            [
-                'value' => 'oldest',
-                'label' => 'Oldest',
+            'sortOptions' => [
+                ['value' => 'oldest', 'label' => 'Oldest'],
+                ['value' => 'name',   'label' => 'Name'],
+                ['value' => 'email',  'label' => 'Email'],
+                ['value' => 'nik',    'label' => 'NIK'],
             ],
-            [
-                'value' => 'name',
-                'label' => 'Name',
-            ],
-            [
-                'value' => 'email',
-                'label' => 'Email',
-            ],
-        ],
-    ];
-}
+        ];
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -212,22 +206,22 @@ class UserService
     |--------------------------------------------------------------------------
     */
     public function getCreateData(): array
-{
-    return [
-        'branches' => Branch::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name']),
+    {
+        return [
+            'branches' => Branch::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
 
-        'availableGroups' => collect(config('auth_groups.groups', []))
-            ->keys()
-            ->toArray(),
+            'availableGroups' => collect(config('auth_groups.groups', []))
+                ->keys()
+                ->toArray(),
 
-        'availablePermissions' => collect(config('auth_groups.permissions', []))
-            ->keys()
-            ->toArray(),
-    ];
-}
+            'availablePermissions' => collect(config('auth_groups.permissions', []))
+                ->keys()
+                ->toArray(),
+        ];
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -235,25 +229,24 @@ class UserService
     |--------------------------------------------------------------------------
     */
     public function getEditData(User $user): array
-{
-    return [
-        'user' => $user->load('branch'),
+    {
+        return [
+            'user'                 => $user->load('branch'),
+            'selectedGroups'       => $this->auth->getGroups($user),
+            'selectedPermissions'  => $this->auth->getPermissions($user),
 
-        'selectedGroups' => $this->auth->getGroups($user),
-        'selectedPermissions' => $this->auth->getPermissions($user),
+            'branches' => Branch::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
 
-        'branches' => Branch::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name']),
+            'availableGroups' => collect(config('auth_groups.groups', []))
+                ->keys()
+                ->toArray(),
 
-        'availableGroups' => collect(config('auth_groups.groups', []))
-            ->keys()
-            ->toArray(),
-
-        'availablePermissions' => collect(config('auth_groups.permissions', []))
-            ->keys()
-            ->toArray(),
-    ];
-}
+            'availablePermissions' => collect(config('auth_groups.permissions', []))
+                ->keys()
+                ->toArray(),
+        ];
+    }
 }

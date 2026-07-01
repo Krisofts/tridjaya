@@ -2,7 +2,7 @@
 
 @section('content')
 
-<x-ui.table title="Users List" description="Manage and monitor all registered users in your system.">
+<x-ui.table title="Daftar User" description="Kelola semua pengguna yang terdaftar di sistem.">
 
     {{-- HEADER ACTIONS --}}
     <x-slot:header>
@@ -15,11 +15,11 @@
         <a href="{{ route('users.create') }}"
             class="bg-brand-500 shadow-theme-xs hover:bg-brand-600 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-white transition">
             <x-icons.add class="fill-current" />
-            Add Users
+            Tambah User
         </a>
     </x-slot:header>
 
-    {{-- TOOLBAR (SEARCH + FILTER) --}}
+    {{-- TOOLBAR --}}
     <x-slot:toolbar>
         <form method="GET">
             <div class="flex gap-3 sm:justify-between">
@@ -29,32 +29,39 @@
                     <span class="absolute top-1/2 left-4 -translate-y-1/2 text-gray-500 dark:text-gray-400">
                         <x-icons.search class="fill-current" />
                     </span>
-
                     <input type="text" name="search" value="{{ request('search') }}"
-                    placeholder="Search name or email..."
-                    class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10
-                    h-11 w-full rounded-lg border border-gray-300 bg-transparent
-                    py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400
-                    focus:ring-3 focus:outline-hidden sm:w-[300px] sm:min-w-[300px]
-                    dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-                    dark:placeholder:text-white/30">
+                        placeholder="Cari nama, NIK, atau email..."
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10
+                               h-11 w-full rounded-lg border border-gray-300 bg-transparent
+                               py-2.5 pr-4 pl-11 text-sm text-gray-800 placeholder:text-gray-400
+                               focus:ring-3 focus:outline-hidden sm:w-[300px] sm:min-w-[300px]
+                               dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
+                               dark:placeholder:text-white/30">
                 </div>
 
                 {{-- FILTER --}}
                 <x-ui.filter-dropdown label="Filter">
 
-                    <x-ui.filter-field type="select" label="Branch" placeholder="All Branch" :options="$branches"
-                        :model="null" :selected="request('branch')" name="branch" />
+                    <x-ui.filter-field
+                        type="select"
+                        label="Branch"
+                        placeholder="Semua Branch"
+                        :options="$branches"
+                        :model="null"
+                        :selected="request('branch')"
+                        name="branch"
+                    />
 
-                    <x-ui.filter-field type="select" label="Group" name="group" placeholder="All Groups"
-                        :selected="request('group')" :options="collect(config('auth_groups.groups'))->map(function ($group, $key) {
-                        return [
-                        'value' => $key,
-                        'label' => $group['title'],
-                        ];
-                        })" />
-
-
+                    <x-ui.filter-field
+                        type="select"
+                        label="Group"
+                        name="group"
+                        placeholder="Semua Group"
+                        :selected="request('group')"
+                        :options="collect(config('auth_groups.groups'))->map(function ($group, $key) {
+                            return ['value' => $key, 'label' => $group['title']];
+                        })"
+                    />
 
                 </x-ui.filter-dropdown>
 
@@ -62,51 +69,32 @@
         </form>
     </x-slot:toolbar>
 
-
-
-
-
     {{-- TABLE HEADER --}}
     <thead class="border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
         <tr class="border-gray-100 dark:border-white/[0.05]">
 
             <th class="px-6 py-3 text-left whitespace-nowrap">
-                <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">
-                    Name
-                </p>
+                <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">Nama</p>
+            </th>
 
+            <th class="px-6 py-3 text-left whitespace-nowrap">
+                <p class="text-theme-xs font-medium text-gray-500 dark:text-gray-400">NIK</p>
             </th>
 
             <th class="px-6 py-3">
-                <div class="flex items-center">
-                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                        Email
-                    </p>
-                </div>
+                <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Email</p>
             </th>
 
             <th class="px-6 py-3">
-                <div class="flex items-center">
-                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                        Branch
-                    </p>
-                </div>
+                <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Branch</p>
             </th>
 
             <th class="px-6 py-3">
-                <div class="flex items-center">
-                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                        Groups
-                    </p>
-                </div>
+                <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Groups</p>
             </th>
 
             <th class="px-6 py-3">
-                <div class="flex items-center">
-                    <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">
-                        Status
-                    </p>
-                </div>
+                <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Status</p>
             </th>
 
             <th class="px-6 py-3 text-right whitespace-nowrap"></th>
@@ -117,19 +105,22 @@
     {{-- TABLE BODY --}}
     <tbody class="divide-y divide-gray-100 dark:divide-white/[0.05]">
 
-        @forelse ($users as $user)
+        @forelse($users as $user)
         <tr>
 
             <td class="p-4 whitespace-nowrap">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-400">      {{ $user->name }}</span>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-400">{{ $user->name }}</span>
             </td>
 
             <td class="p-4 whitespace-nowrap">
-                <p class="text-sm text-gray-700 dark:text-gray-400">
-                    {{ $user->email }}
-                </p>
+                <span class="text-sm text-gray-700 dark:text-gray-400">
+                    {{ $user->nik ?? '-' }}
+                </span>
             </td>
 
+            <td class="p-4 whitespace-nowrap">
+                <p class="text-sm text-gray-700 dark:text-gray-400">{{ $user->email }}</p>
+            </td>
 
             <td class="p-4 whitespace-nowrap">
                 <p class="text-sm text-gray-700 dark:text-gray-400">
@@ -137,34 +128,26 @@
                 </p>
             </td>
 
-
             <td class="p-4 whitespace-nowrap">
                 <p class="text-sm text-gray-700 dark:text-gray-400">
                     {{ $user->groups->pluck('group')->implode(', ') ?: '-' }}
                 </p>
             </td>
 
-
-            {{-- STATUS --}}
             <td class="px-6 py-3.5">
                 <x-ui.badge size="sm" :color="$user->deleted_at ? 'error' : 'success'">
-                    {{ $user->deleted_at ? 'Deleted' : 'Active' }}
+                    {{ $user->deleted_at ? 'Dihapus' : 'Aktif' }}
                 </x-ui.badge>
             </td>
 
             {{-- ACTION --}}
-
-
-
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <x-common.table-dropdown>
 
-                    {{-- BUTTON TRIGGER --}}
                     <x-slot name="button">
                         <button type="button"
                             class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                            <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="fill-current" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path fill-rule="evenodd" clip-rule="evenodd"
                                     d="M5.99902 10.245C6.96552 10.245 7.74902 11.0285 7.74902 11.995V12.005C7.74902 12.9715 6.96552 13.755 5.99902 13.755C5.03253 13.755 4.24902 12.9715 4.24902 12.005V11.995C4.24902 11.0285 5.03253 10.245 5.99902 10.245ZM17.999 10.245C18.9655 10.245 19.749 11.0285 19.749 11.995V12.005C19.749 12.9715 18.9655 13.755 17.999 13.755C17.0325 13.755 16.249 12.9715 16.249 12.005V11.995C16.249 11.0285 17.0325 10.245 17.999 10.245ZM13.749 11.995C13.749 11.0285 12.9655 10.245 11.999 10.245C11.0325 10.245 10.249 11.0285 10.249 11.995V12.005C10.249 12.9715 11.0325 13.755 11.999 13.755C12.9655 13.755 13.749 12.9715 13.749 12.005V11.995Z"
                                     fill=""></path>
@@ -172,12 +155,11 @@
                         </button>
                     </x-slot>
 
-                    {{-- MENU CONTENT --}}
                     <x-slot name="content">
 
                         <a href="{{ route('users.show', $user) }}"
                             class="flex w-full px-3 py-2 font-medium text-left text-gray-500 rounded-lg text-theme-xs hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300">
-                            View
+                            Lihat
                         </a>
 
                         <a href="{{ route('users.edit', $user) }}"
@@ -185,24 +167,22 @@
                             Edit
                         </a>
 
-                        @if (!$user->deleted_at)
+                        @if(! $user->deleted_at)
                         <form action="{{ route('users.destroy', $user) }}" method="POST"
-                            onsubmit="return confirm('Delete user?')">
+                              onsubmit="return confirm('Hapus user {{ $user->name }}?')">
                             @csrf
                             @method('DELETE')
-
                             <button type="submit"
                                 class="flex w-full px-3 py-2 font-medium text-left text-red-500 rounded-lg text-theme-xs hover:bg-red-50 hover:text-red-600 dark:hover:bg-white/5">
-                                Delete
+                                Hapus
                             </button>
                         </form>
                         @else
                         <form action="{{ route('users.restore', $user->id) }}" method="POST">
                             @csrf
-
                             <button type="submit"
                                 class="flex w-full px-3 py-2 font-medium text-left text-green-500 rounded-lg text-theme-xs hover:bg-green-50 hover:text-green-600 dark:hover:bg-white/5">
-                                Restore
+                                Pulihkan
                             </button>
                         </form>
                         @endif
@@ -212,13 +192,11 @@
                 </x-common.table-dropdown>
             </td>
 
-
-
         </tr>
         @empty
         <tr>
-            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-                No users found
+            <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                Tidak ada user ditemukan.
             </td>
         </tr>
         @endforelse
@@ -227,11 +205,9 @@
 
     {{-- FOOTER --}}
     <x-slot name="footer">
-
-
-
         <x-ui.pagination :paginator="$users" />
     </x-slot:footer>
 
 </x-ui.table>
+
 @endsection

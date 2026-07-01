@@ -2,8 +2,6 @@
 
 @section('content')
 
-
-
 <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
 
     {{-- LEFT: FORM --}}
@@ -19,51 +17,56 @@
                 @csrf
                 @method('PUT')
 
+                {{-- NAME --}}
+                <x-form.input.input-with-label
+                    label="Nama Lengkap"
+                    name="name"
+                    :value="old('name', $user->name)"
+                    placeholder="Masukkan nama lengkap"
+                />
 
+                {{-- NIK --}}
+                <x-form.input.input-with-label
+                    label="NIK"
+                    name="nik"
+                    :value="old('nik', $user->nik)"
+                    placeholder="Masukkan NIK"
+                />
 
-                
-              {{-- NAME --}}
-<x-form.input.input-with-label
-    label="Name"
-    name="name"
-    :value="old('name', $user->name)"
-    placeholder="Masukan nama lengkap"
-/>
+                {{-- EMAIL --}}
+                <x-form.input.input-with-label
+                    label="Email"
+                    name="email"
+                    type="email"
+                    :value="old('email', $user->email)"
+                    placeholder="example@tridjaya.com"
+                />
 
-{{-- EMAIL --}}
-<x-form.input.input-with-label
-    label="Email"
-    name="email"
-    type="email"
-    :value="old('email', $user->email)"
-    placeholder="example@tridjaya.com"
-/>
+                {{-- BRANCH --}}
+                <x-form.select.select
+                    name="branch_id"
+                    label="Branch"
+                    :options="$branches"
+                    valueField="id"
+                    labelField="name"
+                    :selected="old('branch_id', $user->branch_id)"
+                    placeholder="Pilih Branch"
+                />
 
-{{-- BRANCH --}}
-<x-form.select.select
-    name="branch_id"
-    label="Branch"
-    :options="$branches"
-    valueField="id"
-    labelField="name"
-    :selected="old('branch_id', $user->branch_id)"
-    placeholder="Select Branch"
-/>
+                {{-- PASSWORD --}}
+                <x-form.input.input-with-label
+                    label="Password"
+                    name="password"
+                    type="password"
+                    placeholder="Kosongkan jika tidak ingin mengubah password"
+                    show-password-toggle
+                />
 
-{{-- PASSWORD --}}
-<x-form.input.input-with-label
-    label="Password"
-    name="password"
-    type="password"
-    placeholder="Leave blank if not change"
-    show-password-toggle
-/>
-
-{{-- ACTION --}}
-<x-common.card-action
-    submitText="Update User"
-    :cancelUrl="route('users.index')"
-/>
+                {{-- ACTION --}}
+                <x-common.card-action
+                    submitText="Update User"
+                    :cancelUrl="route('users.index')"
+                />
 
             </form>
 
@@ -76,50 +79,54 @@
 
         {{-- GROUPS --}}
         <x-common.component-card title="Groups">
-
-            <div class="grid grid-cols-2 gap-2">
-                @forelse ($availableGroups as $group)
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox"
-                               form="userForm"
-                               name="groups[]"
-                               value="{{ $group }}"
-                               class="rounded"
-                               @checked(in_array($group, old('groups', $selectedGroups ?? [])))>
-
-                        <span class="text-sm text-gray-700 dark:text-gray-300">
+            <div class="grid grid-cols-2 gap-3">
+                @forelse($availableGroups as $group)
+                    <label class="flex items-center gap-2.5 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            form="userForm"
+                            name="groups[]"
+                            value="{{ $group }}"
+                            @checked(in_array($group, old('groups', $selectedGroups ?? [])))
+                            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600
+                                   text-blue-600 dark:bg-gray-800
+                                   focus:ring-blue-500 dark:focus:ring-offset-gray-900
+                                   cursor-pointer"
+                        >
+                        <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors capitalize">
                             {{ $group }}
                         </span>
                     </label>
                 @empty
-                    <p class="text-sm text-gray-500">No groups available</p>
+                    <p class="col-span-2 text-sm text-gray-400 dark:text-gray-500">Tidak ada group tersedia.</p>
                 @endforelse
             </div>
-
         </x-common.component-card>
 
         {{-- PERMISSIONS --}}
         <x-common.component-card title="Permissions">
-
-            <div class="grid grid-cols-2 gap-2">
-                @forelse ($availablePermissions as $permission)
-                    <label class="flex items-center space-x-2">
-                        <input type="checkbox"
-                               name="permissions[]"
-                               value="{{ $permission }}"
-                               form="userForm"
-                               class="rounded"
-                               @checked(in_array($permission, old('permissions', $selectedPermissions ?? [])))>
-
-                        <span class="text-sm text-gray-700 dark:text-gray-300">
+            <div class="grid grid-cols-2 gap-3">
+                @forelse($availablePermissions as $permission)
+                    <label class="flex items-center gap-2.5 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            form="userForm"
+                            name="permissions[]"
+                            value="{{ $permission }}"
+                            @checked(in_array($permission, old('permissions', $selectedPermissions ?? [])))
+                            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600
+                                   text-blue-600 dark:bg-gray-800
+                                   focus:ring-blue-500 dark:focus:ring-offset-gray-900
+                                   cursor-pointer"
+                        >
+                        <span class="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                             {{ $permission }}
                         </span>
                     </label>
                 @empty
-                    <p class="text-sm text-gray-500">No permissions available</p>
+                    <p class="col-span-2 text-sm text-gray-400 dark:text-gray-500">Tidak ada permission tersedia.</p>
                 @endforelse
             </div>
-
         </x-common.component-card>
 
     </div>
