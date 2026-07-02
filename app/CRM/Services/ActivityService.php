@@ -27,26 +27,21 @@ class ActivityService
      */
     public function getActiveTypes()
     {
-        return CrmCacheService::rememberMaster(
-            CrmCacheService::keyMasterActivityTypes(),
-            fn () => CrmActivityType::active()->ordered()
-                ->with(['results' => fn ($q) => $q->active()->ordered()])
-                ->get()
-        );
+        // Tidak di-cache sebagai Eloquent object — bisa error unserialize di Redis
+        return CrmActivityType::active()->ordered()
+            ->with(['results' => fn ($q) => $q->active()->ordered()])
+            ->get();
     }
 
     /**
-     * Results per type di-cache 24 jam.
+     * Results per type — query langsung, tidak di-cache.
      */
     public function getResultsByType(int $activityTypeId)
     {
-        return CrmCacheService::rememberMaster(
-            CrmCacheService::keyMasterActivityResults($activityTypeId),
-            fn () => CrmActivityResult::active()
-                ->byType($activityTypeId)
-                ->ordered()
-                ->get(['id', 'name', 'slug', 'is_success', 'is_default'])
-        );
+        return CrmActivityResult::active()
+            ->byType($activityTypeId)
+            ->ordered()
+            ->get(['id', 'name', 'slug', 'is_success', 'is_default']);
     }
 
     public function create(CrmLead $lead, array $data): CrmLeadActivity

@@ -286,12 +286,14 @@ class LeadService
 
     private function getPipelineWithDefault(int $pipelineId): CrmPipeline
     {
-        $pipeline = CrmCacheService::rememberMaster(
-            CrmCacheService::keyMasterPipelines() . ':' . $pipelineId,
-            fn () => CrmPipeline::with('defaultStage')->find($pipelineId)
-        );
+        // Jangan cache Eloquent object — serialisasi Redis bisa gagal
+        // jika class belum di-load saat unserialize. Query langsung saja,
+        // tabel pipeline kecil dan jarang berubah.
+        $pipeline = CrmPipeline::with('defaultStage')->find($pipelineId);
 
-        if (! $pipeline) abort(404, 'Pipeline tidak ditemukan.');
+        if (! $pipeline) {
+            abort(404, 'Pipeline tidak ditemukan.');
+        }
 
         if (! $pipeline->defaultStage) {
             throw ValidationException::withMessages([
