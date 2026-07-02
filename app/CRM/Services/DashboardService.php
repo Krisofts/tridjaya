@@ -23,16 +23,16 @@ class DashboardService
                 $myLeads = CrmLead::query()->where('assigned_to', $user->id);
 
                 return [
-                    'leads_open'       => (clone $myLeads)->where('status', 'open')->count(),
-                    'leads_won'        => (clone $myLeads)->where('status', 'won')->count(),
-                    'leads_lost'       => (clone $myLeads)->where('status', 'lost')->count(),
-                    'leads_total'      => (clone $myLeads)->count(),
-                    'leads_today'      => (clone $myLeads)->whereDate('created_at', today())->count(),
-                    'pipeline_value'   => (clone $myLeads)->where('status', 'open')->sum('estimated_value'),
-                    'tasks_today'      => CrmTask::assignedTo($user->id)->dueToday()->count(),
-                    'tasks_overdue'    => CrmTask::assignedTo($user->id)->overdue()->count(),
-                    'tasks_open'       => CrmTask::assignedTo($user->id)->open()->count(),
-                    'followup_overdue' => (clone $myLeads)
+                    'leads_open'       => (int)(clone $myLeads)->where('status', 'open')->count(),
+                    'leads_won'        => (int)(clone $myLeads)->where('status', 'won')->count(),
+                    'leads_lost'       => (int)(clone $myLeads)->where('status', 'lost')->count(),
+                    'leads_total'      => (int)(clone $myLeads)->count(),
+                    'leads_today'      => (int)(clone $myLeads)->whereDate('created_at', today())->count(),
+                    'pipeline_value'   => (float)(clone $myLeads)->where('status', 'open')->sum('estimated_value'),
+                    'tasks_today'      => (int)CrmTask::assignedTo($user->id)->dueToday()->count(),
+                    'tasks_overdue'    => (int)CrmTask::assignedTo($user->id)->overdue()->count(),
+                    'tasks_open'       => (int)CrmTask::assignedTo($user->id)->open()->count(),
+                    'followup_overdue' => (int)(clone $myLeads)
                         ->where('status', 'open')
                         ->whereNotNull('next_follow_up_at')
                         ->where('next_follow_up_at', '<', now())
@@ -101,26 +101,26 @@ class DashboardService
                 $thisMonth = (clone $base)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year);
                 $lastMonth = (clone $base)->whereMonth('created_at', now()->subMonth()->month)->whereYear('created_at', now()->subMonth()->year);
 
-                $wonThisMonth   = (clone $thisMonth)->where('status', 'won')->count();
-                $wonLastMonth   = (clone $lastMonth)->where('status', 'won')->count();
-                $totalThisMonth = (clone $thisMonth)->count();
+                $wonThisMonth   = (int)(clone $thisMonth)->where('status', 'won')->count();
+                $wonLastMonth   = (int)(clone $lastMonth)->where('status', 'won')->count();
+                $totalThisMonth = (int)(clone $thisMonth)->count();
 
                 return [
-                    'leads_today'        => (clone $today)->count(),
-                    'leads_won_today'    => (clone $today)->where('status', 'won')->count(),
-                    'leads_open'         => (clone $base)->where('status', 'open')->count(),
+                    'leads_today'        => (int)(clone $today)->count(),
+                    'leads_won_today'    => (int)(clone $today)->where('status', 'won')->count(),
+                    'leads_open'         => (int)(clone $base)->where('status', 'open')->count(),
                     'leads_won_month'    => $wonThisMonth,
-                    'leads_lost_month'   => (clone $thisMonth)->where('status', 'lost')->count(),
+                    'leads_lost_month'   => (int)(clone $thisMonth)->where('status', 'lost')->count(),
                     'leads_new_month'    => $totalThisMonth,
-                    'pipeline_value'     => (clone $base)->where('status', 'open')->sum('estimated_value'),
-                    'won_value_month'    => (clone $thisMonth)->where('status', 'won')->sum('estimated_value'),
+                    'pipeline_value'     => (float)(clone $base)->where('status', 'open')->sum('estimated_value'),
+                    'won_value_month'    => (float)(clone $thisMonth)->where('status', 'won')->sum('estimated_value'),
                     'conversion_rate'    => $totalThisMonth > 0
-                        ? round(($wonThisMonth / $totalThisMonth) * 100, 1)
-                        : 0,
+                        ? (float)round(($wonThisMonth / $totalThisMonth) * 100, 1)
+                        : 0.0,
                     'won_vs_last_month'  => $wonLastMonth > 0
-                        ? round((($wonThisMonth - $wonLastMonth) / $wonLastMonth) * 100, 1)
+                        ? (float)round((($wonThisMonth - $wonLastMonth) / $wonLastMonth) * 100, 1)
                         : null,
-                    'tasks_overdue_team' => CrmTask::overdue()->count(),
+                    'tasks_overdue_team' => (int)CrmTask::overdue()->count(),
                 ];
             }
         );
@@ -131,39 +131,58 @@ class DashboardService
         return CrmCacheService::rememberStats(
             CrmCacheService::keyDashboardPipeline($branchId),
             function () use ($branchId) {
-                return CrmPipeline::query()
+                $result = [];
+
+                $pipelines = CrmPipeline::query()
                     ->with(['stages' => fn ($q) => $q->orderBy('sort_order')])
                     ->where('is_active', true)
-                    ->get()
-                    ->map(function ($pipeline) use ($branchId) {
-                        $base = CrmLead::query()
+                    ->get();
+
+                foreach ($pipelines as $pipeline) {
+                    $stageData = [];
+
+                    foreach ($pipeline->stages as $stage) {
+                        $isLostStage = strtolower($stage->name) === 'lost';
+
+                        $count = CrmLead::query()
                             ->where('pipeline_id', $pipeline->id)
-                            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
+                            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                            ->when(
+                                $isLostStage,
+                                fn ($q) => $q->where('status', 'lost'),
+                                fn ($q) => $q->where('stage_id', $stage->id)->where('status', 'open')
+                            )
+                            ->count();
 
-                        $stageData = $pipeline->stages->map(function ($stage) use ($pipeline, $branchId) {
-                            $isLostStage = strtolower($stage->name) === 'lost';
-
-                            $count = CrmLead::query()
-                                ->where('pipeline_id', $pipeline->id)
-                                ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-                                ->when(
-                                    $isLostStage,
-                                    fn ($q) => $q->where('status', 'lost'),
-                                    fn ($q) => $q->where('stage_id', $stage->id)->where('status', 'open')
-                                )
-                                ->count();
-
-                            return ['name' => $stage->name, 'count' => $count];
-                        });
-
-                        return [
-                            'pipeline'    => $pipeline->name,
-                            'total_open'  => (clone $base)->where('status', 'open')->count(),
-                            'total_value' => (clone $base)->where('status', 'open')->sum('estimated_value'),
-                            'stages'      => $stageData,
+                        // Plain array — aman untuk Redis serialize
+                        $stageData[] = [
+                            'name'  => (string) $stage->name,
+                            'count' => (int) $count,
                         ];
-                    })
-                    ->toArray();
+                    }
+
+                    $totalOpen  = CrmLead::query()
+                        ->where('pipeline_id', $pipeline->id)
+                        ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                        ->where('status', 'open')
+                        ->count();
+
+                    $totalValue = CrmLead::query()
+                        ->where('pipeline_id', $pipeline->id)
+                        ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+                        ->where('status', 'open')
+                        ->sum('estimated_value');
+
+                    // Plain array — aman untuk Redis serialize
+                    $result[] = [
+                        'pipeline'    => (string) $pipeline->name,
+                        'total_open'  => (int) $totalOpen,
+                        'total_value' => (float) $totalValue,
+                        'stages'      => $stageData,
+                    ];
+                }
+
+                return $result;
             }
         );
     }
@@ -232,20 +251,25 @@ class DashboardService
         return CrmCacheService::rememberStats(
             CrmCacheService::keyDashboardTrend($branchId),
             function () use ($branchId) {
-                return collect(range(5, 0))->map(function ($i) use ($branchId) {
+                $result = [];
+
+                foreach (range(5, 0) as $i) {
                     $date = now()->subMonths($i);
                     $base = CrmLead::query()
                         ->whereMonth('created_at', $date->month)
                         ->whereYear('created_at', $date->year)
                         ->when($branchId, fn ($q) => $q->where('branch_id', $branchId));
 
-                    return [
-                        'month' => $date->format('M Y'),
-                        'total' => (clone $base)->count(),
-                        'won'   => (clone $base)->where('status', 'won')->count(),
-                        'lost'  => (clone $base)->where('status', 'lost')->count(),
+                    // Plain scalar values — aman untuk Redis
+                    $result[] = [
+                        'month' => (string) $date->format('M Y'),
+                        'total' => (int)(clone $base)->count(),
+                        'won'   => (int)(clone $base)->where('status', 'won')->count(),
+                        'lost'  => (int)(clone $base)->where('status', 'lost')->count(),
                     ];
-                })->toArray();
+                }
+
+                return $result;
             }
         );
     }
